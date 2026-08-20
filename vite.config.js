@@ -20,8 +20,8 @@ export default defineConfig({
         background_color: '#F7F5F0',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/true-homes-crm/',
-        scope: '/true-homes-crm/',
+        start_url: '/True-Homes-CRM/',
+        scope: '/True-Homes-CRM/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
