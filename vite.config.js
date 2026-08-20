@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // set base to '/<repo-name>/'. If you deploy to a custom domain or to
 // https://<username>.github.io/ (a "user site" repo), set base to '/'.
 export default defineConfig({
-  base: '/true-homes-crm/',
+  base: '/True-Homes-CRM/',
   plugins: [
     react(),
     VitePWA({
