@@ -334,6 +334,29 @@ No SQL, no Apps Script changes for this update — purely frontend.
 
 ---
 
+## Admin Command Center
+
+The admin account is now a pure oversight/management role — Settings has three new links (admin only):
+
+- **Team Performance** — every agent, side by side: open leads, never-called leads, pending
+  follow-ups (overdue called out), hot leads, SV Scheduled/Done this month, and Won. Sort by any
+  column, tap an agent to jump straight to their filtered lead list.
+- **Activity Log** — a running feed of every call any agent logs (outcome, notes, next action) and
+  every lead transfer, filterable by agent. This is how you spot a wrongly-logged call or a mistaken
+  status change — the notes are right there.
+- **Automatic Round Robin** (toggle) — when off (default), new leads land in the Lead Pool for you
+  to assign by hand, same as before. Turn it on and every new lead (Facebook import, or a CSV import
+  left unassigned) is handed to the next agent in rotation the instant it's created — no Lead Pool
+  step at all, even for single one-off leads. It only ever picks agents with "Receiving Leads" on,
+  and always remembers who got the last one so the rotation stays fair.
+
+**Transferring a lead:** open any lead → admin sees an "Assigned to" card near the top with a
+**Transfer** button → pick the new agent. It's logged in Activity Log automatically.
+
+**Setup:** Supabase → SQL Editor → run `supabase/admin_command_center_pack.sql`. No other setup.
+
+---
+
 ## Project structure
 
 ```

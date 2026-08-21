@@ -14,6 +14,8 @@ import LeadPool from './pages/LeadPool.jsx'
 import DailyReport from './pages/DailyReport.jsx'
 import SVReport from './pages/SVReport.jsx'
 import Settings from './pages/Settings.jsx'
+import TeamPerformance from './pages/TeamPerformance.jsx'
+import ActivityLog from './pages/ActivityLog.jsx'
 
 function ScrollRestoration() {
   useScrollRestoration()
@@ -53,6 +55,8 @@ export default function App() {
                   <Route path="/reports/daily" element={<DailyReport />} />
                   <Route path="/reports/sv" element={<SVReport />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/team" element={<TeamPerformance />} />
+                  <Route path="/activity-log" element={<ActivityLog />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </div>

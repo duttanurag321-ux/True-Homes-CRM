@@ -7,7 +7,7 @@ import './styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter basename="/True-Homes-CRM">
+    <BrowserRouter basename="/true-homes-crm">
       <AuthProvider>
         <App />
       </AuthProvider>

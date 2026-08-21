@@ -22,3 +22,11 @@ export function usePersistedState(key, initialValue) {
 
   return [value, setValue]
 }
+
+// For the rare case another page needs to hand off state before
+// navigating (e.g. "view this agent's leads" jumping from Team
+// Performance into the Leads page's filters) without both pages
+// needing to share a component tree.
+export function setPersisted(key, value) {
+  memoryStore.set(key, value)
+}

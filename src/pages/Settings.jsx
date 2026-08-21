@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 import TopBar from '../components/TopBar.jsx'
-import { IconFire, IconInbox } from '../components/Icons.jsx'
+import { IconFire, IconInbox, IconLeads, IconReports } from '../components/Icons.jsx'
 
 export default function Settings() {
   const { user, profile, signOut } = useAuth()
@@ -12,6 +12,7 @@ export default function Settings() {
   const [svTarget, setSvTarget] = useState(null)
   const [svTargetInput, setSvTargetInput] = useState('')
   const [savingTarget, setSavingTarget] = useState(false)
+  const [autoAssign, setAutoAssign] = useState(null)
   const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
@@ -39,14 +40,22 @@ export default function Settings() {
       .then(({ data }) => setAgents(data || []))
     supabase
       .from('app_settings')
-      .select('sv_monthly_target')
+      .select('sv_monthly_target,auto_assign_enabled')
       .eq('id', 1)
       .maybeSingle()
       .then(({ data }) => {
         setSvTarget(data?.sv_monthly_target ?? 12)
         setSvTargetInput(String(data?.sv_monthly_target ?? 12))
+        setAutoAssign(data?.auto_assign_enabled ?? false)
       })
   }, [isAdmin])
+
+  async function toggleAutoAssign() {
+    const next = !autoAssign
+    setAutoAssign(next)
+    const { error } = await supabase.from('app_settings').update({ auto_assign_enabled: next }).eq('id', 1)
+    if (error) setAutoAssign(!next) // revert on failure
+  }
 
   async function saveSvTarget() {
     const n = parseInt(svTargetInput, 10)
@@ -118,6 +127,64 @@ export default function Settings() {
               </div>
               <span className="text-muted">→</span>
             </Link>
+
+            <Link
+              to="/team"
+              className="press flex items-center justify-between bg-white rounded-2xl border border-line/60 shadow-card p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
+                  <IconLeads size={18} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Team Performance</p>
+                  <p className="text-xs text-muted">Leads, calls, pending & SVs — per agent</p>
+                </div>
+              </div>
+              <span className="text-muted">→</span>
+            </Link>
+
+            <Link
+              to="/activity-log"
+              className="press flex items-center justify-between bg-white rounded-2xl border border-line/60 shadow-card p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
+                  <IconReports size={18} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Activity Log</p>
+                  <p className="text-xs text-muted">Every call logged, every lead transferred</p>
+                </div>
+              </div>
+              <span className="text-muted">→</span>
+            </Link>
+
+            <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
+              <div className="flex items-center justify-between">
+                <div className="pr-3">
+                  <p className="text-sm font-semibold">Automatic Round Robin</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    When on, every new lead (Facebook import, or a CSV import left unassigned) is handed to the next
+                    agent in rotation instantly — it skips the Lead Pool entirely. Only agents with "Receiving Leads"
+                    on below are included, and the system remembers who got the last one.
+                  </p>
+                </div>
+                <button
+                  onClick={toggleAutoAssign}
+                  disabled={autoAssign === null}
+                  className={`press relative h-6 w-11 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
+                    autoAssign ? 'bg-success' : 'bg-line'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      autoAssign ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
 
             <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
               <p className="text-sm font-semibold mb-1">Monthly Site Visit target</p>

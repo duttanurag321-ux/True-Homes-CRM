@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import TopBar from '../components/TopBar.jsx'
+import Sheet from '../components/Sheet.jsx'
 import { StagePill, OutcomePill } from '../components/Pills.jsx'
 import FollowUpSheet from '../components/FollowUpSheet.jsx'
 import { PageLoader } from '../components/Loader.jsx'
@@ -19,12 +20,16 @@ import {
 export default function LeadDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
   const [lead, setLead] = useState(null)
   const [activities, setActivities] = useState([])
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [agents, setAgents] = useState([])
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferring, setTransferring] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -40,6 +45,37 @@ export default function LeadDetail() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    supabase
+      .from('profiles')
+      .select('id,full_name,email')
+      .eq('role', 'agent')
+      .order('full_name')
+      .then(({ data }) => setAgents(data || []))
+  }, [isAdmin])
+
+  async function handleTransfer(toAgentId) {
+    setTransferring(true)
+    const fromAgent = lead.assigned_to || null
+    const { error: updateErr } = await supabase.from('leads').update({ assigned_to: toAgentId }).eq('id', id)
+    if (!updateErr) {
+      await supabase.from('lead_reassignments').insert({
+        lead_id: id,
+        from_agent: fromAgent,
+        to_agent: toAgentId,
+        reassigned_by: user.id
+      })
+    }
+    setTransferring(false)
+    setTransferOpen(false)
+    if (updateErr) {
+      alert('Could not transfer — ' + updateErr.message)
+      return
+    }
+    load()
+  }
 
   async function handleDelete() {
     if (!confirm(`Delete ${lead.name} permanently? This also removes their call history. This can't be undone.`)) return
@@ -130,6 +166,22 @@ export default function LeadDetail() {
           )}
         </div>
 
+        {isAdmin && (
+          <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted font-medium">Assigned to</p>
+              <p className="text-sm font-semibold mt-0.5">
+                {agents.find((a) => a.id === lead.assigned_to)?.full_name ||
+                  agents.find((a) => a.id === lead.assigned_to)?.email ||
+                  (lead.assigned_to ? 'Agent' : 'Unassigned — in Lead Pool')}
+              </p>
+            </div>
+            <button onClick={() => setTransferOpen(true)} className="press px-3.5 py-2 rounded-xl bg-base border border-line text-sm font-semibold">
+              Transfer
+            </button>
+          </div>
+        )}
+
         <button onClick={() => setSheetOpen(true)} className="press w-full py-3.5 rounded-xl bg-ink text-white font-semibold">
           Log call & update stage
         </button>
@@ -173,6 +225,24 @@ export default function LeadDetail() {
       </div>
 
       <FollowUpSheet lead={lead} open={sheetOpen} onClose={() => setSheetOpen(false)} onSaved={load} />
+
+      <Sheet open={transferOpen} onClose={() => setTransferOpen(false)} title={`Transfer ${lead.name}`}>
+        <div className="space-y-2">
+          {agents
+            .filter((a) => a.id !== lead.assigned_to)
+            .map((a) => (
+              <button
+                key={a.id}
+                onClick={() => handleTransfer(a.id)}
+                disabled={transferring}
+                className="press w-full flex items-center justify-between bg-base rounded-xl border border-line px-4 py-3 text-left disabled:opacity-50"
+              >
+                <span className="text-sm font-medium">{a.full_name || a.email}</span>
+              </button>
+            ))}
+          {agents.length <= 1 && <p className="text-sm text-muted text-center py-4">No other agents to transfer to.</p>}
+        </div>
+      </Sheet>
     </div>
   )
 }

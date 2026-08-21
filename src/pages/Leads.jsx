@@ -11,12 +11,13 @@ import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconPlus, IconUpload, IconSearch, IconFilter, IconInbox } from '../components/Icons.jsx'
 import { STAGES, CALL_OUTCOMES, LEAD_SOURCES } from '../lib/constants.js'
 
-const EMPTY_FILTERS = { stage: '', outcome: '', source: '' }
+const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '' }
 
 export default function Leads() {
   const { user, profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const [leads, setLeads] = useState([])
+  const [agents, setAgents] = useState([])
   // Persisted (not plain useState) so opening a lead and coming back
   // doesn't wipe out what you'd searched/filtered for — the Leads and
   // Lead Detail pages are siblings in the router, so this component
@@ -42,6 +43,16 @@ export default function Leads() {
   }, [user.id, isAdmin])
 
   useEffect(() => {
+    if (!isAdmin) return
+    supabase
+      .from('profiles')
+      .select('id,full_name,email')
+      .eq('role', 'agent')
+      .order('full_name')
+      .then(({ data }) => setAgents(data || []))
+  }, [isAdmin])
+
+  useEffect(() => {
     load()
   }, [load])
 
@@ -65,6 +76,7 @@ export default function Leads() {
     }
     if (filters.outcome) list = list.filter((l) => l.call_status === filters.outcome)
     if (filters.source) list = list.filter((l) => l.source === filters.source)
+    if (filters.agent) list = list.filter((l) => l.assigned_to === filters.agent)
     if (query.trim()) {
       const q = query.toLowerCase()
       list = list.filter(
@@ -184,6 +196,12 @@ export default function Leads() {
           {filters.stage && <FilterChip label={STAGES.find((s) => s.key === filters.stage)?.label} onClear={() => setFilters((f) => ({ ...f, stage: '' }))} />}
           {filters.outcome && <FilterChip label={filters.outcome} onClear={() => setFilters((f) => ({ ...f, outcome: '' }))} />}
           {filters.source && <FilterChip label={filters.source} onClear={() => setFilters((f) => ({ ...f, source: '' }))} />}
+          {filters.agent && (
+            <FilterChip
+              label={agents.find((a) => a.id === filters.agent)?.full_name || 'Agent'}
+              onClear={() => setFilters((f) => ({ ...f, agent: '' }))}
+            />
+          )}
           <button onClick={clearFilters} className="press text-xs font-semibold text-accent px-1.5">
             Clear all
           </button>
@@ -273,6 +291,23 @@ export default function Leads() {
               ))}
             </div>
           </div>
+
+          {isAdmin && (
+            <div>
+              <p className="text-sm font-semibold mb-2">Agent</p>
+              <div className="flex flex-wrap gap-1.5">
+                <PillOption label="All" active={!draftFilters.agent} onClick={() => setDraftFilters((f) => ({ ...f, agent: '' }))} />
+                {agents.map((a) => (
+                  <PillOption
+                    key={a.id}
+                    label={a.full_name || a.email}
+                    active={draftFilters.agent === a.id}
+                    onClick={() => setDraftFilters((f) => ({ ...f, agent: a.id }))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <button onClick={clearFilters} className="press flex-1 py-3 rounded-xl bg-base border border-line font-semibold text-sm">
