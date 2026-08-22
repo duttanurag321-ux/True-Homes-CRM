@@ -13,7 +13,7 @@ needed beyond copy-paste — just follow the steps in order.
 
 - **Frontend**: React app, hosted free on **GitHub Pages**
 - **Backend**: **Supabase** (free tier) — database, login, and security rules
-- **Result**: A URL like `https://yourusername.github.io/true-homes-crm/` that you add to your
+- **Result**: A URL like `https://yourusername.github.io/True-Homes-CRM/` that you add to your
   phone's home screen and it behaves like a real app (full screen, no browser bar, works offline
   once loaded).
 
@@ -42,7 +42,7 @@ and skip `fix_pack_1.sql`.
 
 1. Go to [supabase.com](https://supabase.com) and sign up (free — GitHub login is fastest).
 2. Click **New Project**.
-   - Name: `true-homes-crm` (anything you like)
+   - Name: `True-Homes-CRM` (anything you like)
    - Database password: generate one and **save it somewhere** — you likely won't need it again,
      but keep it safe.
    - Region: pick the one closest to India (e.g. Singapore).
@@ -79,7 +79,7 @@ Keep this tab open — you'll come back for these.
 
 ## Part 2 — Put the code on GitHub
 
-1. Go to [github.com](https://github.com) and create a **new repository** called `true-homes-crm`.
+1. Go to [github.com](https://github.com) and create a **new repository** called `True-Homes-CRM`.
    - Keep it **Public** (GitHub Pages free hosting requires this, unless you're on a paid plan).
    - Don't initialize with a README (you already have one).
 2. On your computer, open a terminal in this project folder and run:
@@ -89,7 +89,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/true-homes-crm.git
+git remote add origin https://github.com/YOUR-USERNAME/True-Homes-CRM.git
 git push -u origin main
 ```
 
@@ -97,7 +97,7 @@ Replace `YOUR-USERNAME` with your actual GitHub username.
 
 ### Add your Supabase keys as GitHub Secrets (so the live site can connect)
 
-3. On GitHub, open your `true-homes-crm` repo → **Settings** → **Secrets and variables** → **Actions**.
+3. On GitHub, open your `True-Homes-CRM` repo → **Settings** → **Secrets and variables** → **Actions**.
 4. Click **New repository secret** and add:
    - Name: `VITE_SUPABASE_URL` → Value: (the Project URL you copied)
    - Click **New repository secret** again:
@@ -113,10 +113,10 @@ Replace `YOUR-USERNAME` with your actual GitHub username.
 7. Open `vite.config.js` in this project and confirm this line matches your repo name exactly:
 
 ```js
-base: '/true-homes-crm/',
+base: '/True-Homes-CRM/',
 ```
 
-If you named your GitHub repo something other than `true-homes-crm`, change this line to
+If you named your GitHub repo something other than `True-Homes-CRM`, change this line to
 `/your-repo-name/` (and also update `start_url` and `scope` a few lines below it to match).
 Commit and push the change if you edit it.
 
@@ -133,7 +133,7 @@ git push
 10. Go back to **Settings → Pages** — your live URL will be shown at the top, something like:
 
 ```
-https://yourusername.github.io/true-homes-crm/
+https://yourusername.github.io/True-Homes-CRM/
 ```
 
 That's your live app. Every time you `git push` to `main`, it rebuilds and redeploys automatically.
