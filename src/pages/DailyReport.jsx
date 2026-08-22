@@ -8,6 +8,7 @@ import { CALL_OUTCOMES } from '../lib/constants.js'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { todayStr, formatDateHuman, localDayBoundsUTC } from '../lib/helpers.js'
 import { IconReports } from '../components/Icons.jsx'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function DailyReport() {
   const { user, profile } = useAuth()
@@ -98,6 +99,9 @@ export default function DailyReport() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   return (
     <div>

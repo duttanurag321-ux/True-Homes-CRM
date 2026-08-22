@@ -6,19 +6,20 @@ import TopBar from '../components/TopBar.jsx'
 import { PageLoader } from '../components/Loader.jsx'
 import { setPersisted } from '../lib/usePersistedState.js'
 import { todayStr, localMonthBoundsUTC } from '../lib/helpers.js'
-import { STAGES } from '../lib/constants.js'
+import { STAGES, CALL_OUTCOMES } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 const STAGE_ORDER = STAGES.map((s) => s.key)
 const SV_DONE_RANK = STAGE_ORDER.indexOf('sv_done')
 
-const COLUMNS = [
-  { key: 'openLeads', label: 'Open' },
-  { key: 'uncalled', label: 'Uncalled' },
-  { key: 'pendingToday', label: 'Pending' },
-  { key: 'svScheduled', label: 'SV Sched.' },
-  { key: 'svDone', label: 'SV Done' },
-  { key: 'hot', label: 'Hot' },
-  { key: 'won', label: 'Won' }
+// Fewer, clearly-worded sort options rather than terse column names —
+// this was one of the confusing parts before.
+const SORT_OPTIONS = [
+  { key: 'pendingToday', label: 'Most follow-ups pending' },
+  { key: 'uncalled', label: 'Most new leads waiting' },
+  { key: 'overdue', label: 'Most overdue' },
+  { key: 'svDone', label: 'Most SVs done' },
+  { key: 'won', label: 'Most won' }
 ]
 
 export default function TeamPerformance() {
@@ -84,8 +85,13 @@ export default function TeamPerformance() {
       const uncalled = open.filter((l) => !l.call_status)
       const pendingToday = open.filter((l) => l.call_status && l.next_followup_date && l.next_followup_date <= today)
       const overdue = pendingToday.filter((l) => l.next_followup_date < today)
-      const hot = open.filter((l) => l.call_status === 'IN')
       const won = mine.filter((l) => l.status === 'won')
+
+      const outcomeCounts = {}
+      CALL_OUTCOMES.forEach((o) => {
+        outcomeCounts[o.key] = open.filter((l) => l.call_status === o.key).length
+      })
+
       return {
         agent,
         openLeads: open.length,
@@ -94,8 +100,8 @@ export default function TeamPerformance() {
         overdue: overdue.length,
         svScheduled: svScheduledByAgent.get(agent.id) || 0,
         svDone: svDoneByAgent.get(agent.id) || 0,
-        hot: hot.length,
-        won: won.length
+        won: won.length,
+        outcomeCounts
       }
     })
 
@@ -106,6 +112,9 @@ export default function TeamPerformance() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   const sorted = useMemo(() => [...rows].sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0)), [rows, sortKey])
 
@@ -133,7 +142,7 @@ export default function TeamPerformance() {
         {!loading && rows.length > 0 && (
           <>
             <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-4 px-4">
-              {COLUMNS.map((c) => (
+              {SORT_OPTIONS.map((c) => (
                 <button
                   key={c.key}
                   onClick={() => setSortKey(c.key)}
@@ -141,46 +150,66 @@ export default function TeamPerformance() {
                     sortKey === c.key ? 'bg-ink text-white border-ink' : 'bg-white text-muted border-line'
                   }`}
                 >
-                  Sort: {c.label}
+                  {c.label}
                 </button>
               ))}
             </div>
 
             <div className="space-y-3">
               {sorted.map((r) => (
-                <button
-                  key={r.agent.id}
-                  onClick={() => viewAgentLeads(r.agent.id)}
-                  className="press w-full text-left bg-white rounded-2xl border border-line/60 shadow-card p-4"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="h-9 w-9 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {(r.agent.full_name || r.agent.email || '?')[0]?.toUpperCase()}
+                <div key={r.agent.id} className="bg-white rounded-2xl border border-line/60 shadow-card overflow-hidden">
+                  <button onClick={() => viewAgentLeads(r.agent.id)} className="press w-full text-left p-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="h-9 w-9 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {(r.agent.full_name || r.agent.email || '?')[0]?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[15px] truncate">{r.agent.full_name || r.agent.email}</p>
+                          {!r.agent.receiving_leads && <p className="text-[11px] text-warning font-medium">Not receiving leads</p>}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-[15px] truncate">{r.agent.full_name || r.agent.email}</p>
-                        {!r.agent.receiving_leads && <p className="text-[11px] text-warning font-medium">Not receiving leads</p>}
-                      </div>
+                      <span className="text-xs text-muted flex-shrink-0">View leads →</span>
                     </div>
-                    {r.overdue > 0 && (
-                      <span className="text-[11px] font-semibold text-danger bg-danger/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                        {r.overdue} overdue
-                      </span>
-                    )}
+                  </button>
+
+                  {/* Two headline numbers, kept clearly apart on purpose — this
+                      is exactly the "new vs follow-ups" split the rest of the
+                      app now uses, so it reads the same way here. */}
+                  <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+                    <div className="rounded-xl bg-base px-3 py-2.5">
+                      <p className="text-[20px] font-bold tabular-nums text-ink">{r.uncalled}</p>
+                      <p className="text-[11px] text-muted font-medium">New leads pending (uncalled)</p>
+                    </div>
+                    <div className="rounded-xl bg-base px-3 py-2.5">
+                      <p className={`text-[20px] font-bold tabular-nums ${r.overdue > 0 ? 'text-danger' : 'text-ink'}`}>{r.pendingToday}</p>
+                      <p className="text-[11px] text-muted font-medium">
+                        Follow-ups pending{r.overdue > 0 ? ` (${r.overdue} overdue)` : ''}
+                      </p>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <MiniStat value={r.openLeads} label="Open" />
-                    <MiniStat value={r.uncalled} label="Uncalled" />
-                    <MiniStat value={r.pendingToday} label="Pending" highlight={r.pendingToday > 0} />
-                    <MiniStat value={r.hot} label="Hot" />
+
+                  <div className="px-4 pb-3">
+                    <p className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-1.5">Call outcomes (open leads)</p>
+                    <div className="grid grid-cols-6 gap-1 text-center">
+                      {CALL_OUTCOMES.map((o) => (
+                        <div key={o.key}>
+                          <p className="text-sm font-bold tabular-nums" style={{ color: o.color }}>
+                            {r.outcomeCounts[o.key]}
+                          </p>
+                          <p className="text-[9px] text-muted font-medium">{o.key}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center mt-2 pt-2 border-t border-line">
-                    <MiniStat value={r.svScheduled} label="SV Sched." small />
-                    <MiniStat value={r.svDone} label="SV Done" small />
-                    <MiniStat value={r.won} label="Won" small />
+
+                  <div className="px-4 pb-4 pt-3 border-t border-line grid grid-cols-4 gap-2 text-center">
+                    <MiniStat value={r.openLeads} label="Open total" />
+                    <MiniStat value={r.svScheduled} label="SV Sched." />
+                    <MiniStat value={r.svDone} label="SV Done" />
+                    <MiniStat value={r.won} label="Won" />
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </>
@@ -190,10 +219,10 @@ export default function TeamPerformance() {
   )
 }
 
-function MiniStat({ value, label, highlight, small }) {
+function MiniStat({ value, label }) {
   return (
     <div>
-      <p className={`font-bold tabular-nums ${small ? 'text-sm' : 'text-base'} ${highlight ? 'text-danger' : ''}`}>{value}</p>
+      <p className="text-[15px] font-bold tabular-nums text-ink">{value}</p>
       <p className="text-[10px] text-muted font-medium mt-0.5">{label}</p>
     </div>
   )

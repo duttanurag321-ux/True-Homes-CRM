@@ -6,6 +6,7 @@ import TopBar from '../components/TopBar.jsx'
 import { PageLoader } from '../components/Loader.jsx'
 import { StagePill, OutcomePill } from '../components/Pills.jsx'
 import { formatDateHuman, toLocalDateStr } from '../lib/helpers.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function ActivityLog() {
   const { profile } = useAuth()
@@ -44,6 +45,9 @@ export default function ActivityLog() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   const agentMap = useMemo(() => new Map(agents.map((a) => [a.id, a.full_name || a.email])), [agents])
 

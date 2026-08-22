@@ -8,6 +8,7 @@ import { StagePill, OutcomePill } from '../components/Pills.jsx'
 import FollowUpSheet from '../components/FollowUpSheet.jsx'
 import { PageLoader } from '../components/Loader.jsx'
 import { IconWhatsapp, IconCall, IconCalendar } from '../components/Icons.jsx'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 import {
   displayPhone,
   whatsappLink,
@@ -46,15 +47,17 @@ export default function LeadDetail() {
     load()
   }, [load])
 
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
+
   useEffect(() => {
-    if (!isAdmin) return
     supabase
       .from('profiles')
       .select('id,full_name,email')
       .eq('role', 'agent')
       .order('full_name')
       .then(({ data }) => setAgents(data || []))
-  }, [isAdmin])
+  }, [])
 
   async function handleTransfer(toAgentId) {
     setTransferring(true)
@@ -166,14 +169,16 @@ export default function LeadDetail() {
           )}
         </div>
 
-        {isAdmin && (
+        {(isAdmin || lead.assigned_to === user.id) && (
           <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted font-medium">Assigned to</p>
               <p className="text-sm font-semibold mt-0.5">
-                {agents.find((a) => a.id === lead.assigned_to)?.full_name ||
-                  agents.find((a) => a.id === lead.assigned_to)?.email ||
-                  (lead.assigned_to ? 'Agent' : 'Unassigned — in Lead Pool')}
+                {isAdmin
+                  ? agents.find((a) => a.id === lead.assigned_to)?.full_name ||
+                    agents.find((a) => a.id === lead.assigned_to)?.email ||
+                    (lead.assigned_to ? 'Agent' : 'Unassigned — in Lead Pool')
+                  : 'You'}
               </p>
             </div>
             <button onClick={() => setTransferOpen(true)} className="press px-3.5 py-2 rounded-xl bg-base border border-line text-sm font-semibold">

@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './lib/AuthContext.jsx'
 import { useScrollRestoration } from './lib/useScrollRestoration.js'
+import { RefreshProvider } from './lib/RefreshContext.jsx'
 import BottomNav from './components/BottomNav.jsx'
+import PullToRefresh from './components/PullToRefresh.jsx'
 import { SplashLoader } from './components/Loader.jsx'
 import Login from './pages/Login.jsx'
 import TodayWork from './pages/TodayWork.jsx'
@@ -42,25 +44,28 @@ export default function App() {
           path="/*"
           element={
             <Protected>
-              <div className="pb-24 safe-top">
-                <Routes>
-                  <Route path="/" element={<TodayWork />} />
-                  <Route path="/pipeline" element={<Pipeline />} />
-                  <Route path="/leads" element={<Leads />} />
-                  <Route path="/leads/new" element={<LeadForm />} />
-                  <Route path="/leads/upload" element={<BulkUpload />} />
-                  <Route path="/leads/pool" element={<LeadPool />} />
-                  <Route path="/leads/:id" element={<LeadDetail />} />
-                  <Route path="/leads/:id/edit" element={<LeadForm />} />
-                  <Route path="/reports/daily" element={<DailyReport />} />
-                  <Route path="/reports/sv" element={<SVReport />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/team" element={<TeamPerformance />} />
-                  <Route path="/activity-log" element={<ActivityLog />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </div>
-              <BottomNav />
+              <RefreshProvider>
+                <PullToRefresh />
+                <div className="pb-24 safe-top">
+                  <Routes>
+                    <Route path="/" element={<TodayWork />} />
+                    <Route path="/pipeline" element={<Pipeline />} />
+                    <Route path="/leads" element={<Leads />} />
+                    <Route path="/leads/new" element={<LeadForm />} />
+                    <Route path="/leads/upload" element={<BulkUpload />} />
+                    <Route path="/leads/pool" element={<LeadPool />} />
+                    <Route path="/leads/:id" element={<LeadDetail />} />
+                    <Route path="/leads/:id/edit" element={<LeadForm />} />
+                    <Route path="/reports/daily" element={<DailyReport />} />
+                    <Route path="/reports/sv" element={<SVReport />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/team" element={<TeamPerformance />} />
+                    <Route path="/activity-log" element={<ActivityLog />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </div>
+                <BottomNav />
+              </RefreshProvider>
             </Protected>
           }
         />

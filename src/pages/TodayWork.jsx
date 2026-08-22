@@ -11,6 +11,7 @@ import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconFire } from '../components/Icons.jsx'
 import { todayStr, localDayBoundsUTC } from '../lib/helpers.js'
 import HomeDashboard from '../components/HomeDashboard.jsx'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function TodayWork() {
   const { user, profile } = useAuth()
@@ -81,6 +82,9 @@ export default function TodayWork() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   // A freshly-imported (or reassigned) lead should show up here without
   // the agent having to pull-to-refresh.

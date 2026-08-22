@@ -8,6 +8,7 @@ import { PageLoader } from '../components/Loader.jsx'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { displayPhone, toLocalDateStr, formatDateHuman } from '../lib/helpers.js'
 import { STAGES } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 function startOfWeek(d) {
   const dt = new Date(d)
@@ -78,6 +79,9 @@ export default function SVReport() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   // Counting is per LEAD, not per call/activity row, and only counts a
   // lead while its live status still backs up the mark — if the SV

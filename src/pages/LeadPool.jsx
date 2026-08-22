@@ -9,6 +9,7 @@ import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconSearch, IconCalendar } from '../components/Icons.jsx'
 import { displayPhone, formatDateHuman, formatINRCompact, toLocalDateStr } from '../lib/helpers.js'
 import { LEAD_ORIGINS, LEAD_ORIGIN_MAP } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function LeadPool() {
   const { user, profile } = useAuth()
@@ -38,6 +39,9 @@ export default function LeadPool() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   // Live updates: a lead landing in the pool (e.g. a fresh Facebook
   // import) or leaving it (another admin just assigned it) should show

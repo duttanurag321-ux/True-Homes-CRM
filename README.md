@@ -357,6 +357,26 @@ The admin account is now a pure oversight/management role — Settings has three
 
 ---
 
+## Peer-to-peer lead transfer, pull-to-refresh, and a clearer Team Performance
+
+**Agents can now transfer their own leads to each other** — open any lead you're assigned →
+**Transfer** → pick a teammate. Not admin-only anymore; every agent can hand off their own leads
+directly. Admins can still see the full transfer history in Activity Log.
+
+**Pull down to refresh** — on any list page (Today, Leads, Pipeline, Lead Pool, Reports, Team
+Performance, Activity Log, a lead's own page), pull down from the very top and let go to refetch
+that page's data, same as any native app.
+
+**Team Performance is clearer now** — "New leads pending" (never called) and "Follow-ups pending"
+(overdue called out separately) are two distinct numbers, not blended together. Below that, a full
+call-outcome breakdown (IN/NI/CB/NP/NR/OFF) per agent, then SV Scheduled/Done and Won. Also fixed a
+bug where some numbers rendered invisible (white-on-white) on this page specifically.
+
+**Setup:** Supabase → SQL Editor → run `supabase/peer_transfer_pack.sql`. Then upload the changed
+files and redeploy as usual.
+
+---
+
 ## Project structure
 
 ```

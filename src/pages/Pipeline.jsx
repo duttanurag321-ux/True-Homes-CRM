@@ -6,6 +6,7 @@ import LeadCard from '../components/LeadCard.jsx'
 import { ListSkeleton } from '../components/Loader.jsx'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { OPEN_STAGES, STAGE_MAP } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function Pipeline() {
   const { user } = useAuth()
@@ -30,6 +31,9 @@ export default function Pipeline() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   const counts = useMemo(() => {
     const c = { all: leads.length }

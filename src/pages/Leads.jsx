@@ -10,6 +10,7 @@ import { useLeadsRealtime } from '../lib/useLeadsRealtime.js'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconPlus, IconUpload, IconSearch, IconFilter, IconInbox } from '../components/Icons.jsx'
 import { STAGES, CALL_OUTCOMES, LEAD_SOURCES } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '' }
 
@@ -55,6 +56,9 @@ export default function Leads() {
   useEffect(() => {
     load()
   }, [load])
+
+  // Lets the pull-down-to-refresh gesture re-run this page's own load().
+  useRegisterRefresh(load)
 
   // Imported leads (or any reassignment) should appear live, not just on
   // next manual refresh.
