@@ -61,23 +61,23 @@ export default function LeadDetail() {
 
   async function handleTransfer(toAgentId) {
     setTransferring(true)
-    const fromAgent = lead.assigned_to || null
-    const { error: updateErr } = await supabase.from('leads').update({ assigned_to: toAgentId }).eq('id', id)
-    if (!updateErr) {
-      await supabase.from('lead_reassignments').insert({
-        lead_id: id,
-        from_agent: fromAgent,
-        to_agent: toAgentId,
-        reassigned_by: user.id
-      })
-    }
+    const { error } = await supabase.rpc('transfer_lead', { p_lead_id: id, p_to_agent: toAgentId })
     setTransferring(false)
     setTransferOpen(false)
-    if (updateErr) {
-      alert('Could not transfer — ' + updateErr.message)
+    if (error) {
+      alert('Could not transfer — ' + error.message)
       return
     }
-    load()
+    // A non-admin who just transferred their own lead away can no longer
+    // see it (same rule as everywhere else — you only see leads assigned
+    // to you) — reloading it in place would just show a blank/broken
+    // page, so send them back to their list instead. Admin can still see
+    // it either way, so just refresh in place.
+    if (isAdmin) {
+      load()
+    } else {
+      navigate('/leads')
+    }
   }
 
   async function handleDelete() {
