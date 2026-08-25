@@ -377,6 +377,28 @@ files and redeploy as usual.
 
 ---
 
+## Push Notifications
+
+Real push notifications — new lead assigned, a follow-up's specific time coming due, and a once-daily
+morning digest of everything due that day. Works on Android (installed via Chrome) even when the app
+is fully closed. Works on iOS too, but only if added to the Home Screen (iOS 16.4+) — a plain Safari
+tab can't receive them on iOS.
+
+This is the most involved setup in the whole project — it needs three small pieces of server code
+(Supabase Edge Functions) in addition to the usual SQL + GitHub steps. Full instructions are in the
+setup conversation; short version:
+
+1. Deploy the three functions in `supabase/functions/` via Supabase Dashboard → Edge Functions.
+2. Set Edge Function secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
+   `FUNCTION_SECRET`, `APP_URL`.
+3. Run `supabase/notifications_pack.sql` (after replacing the two placeholders in it with your
+   project ref and your chosen `FUNCTION_SECRET`).
+4. Add `VITE_VAPID_PUBLIC_KEY` as a GitHub Actions secret (same place as the Supabase ones), upload
+   the code, redeploy.
+5. Each agent turns notifications on themselves in Settings — it's per-device, not automatic.
+
+---
+
 ## Project structure
 
 ```
