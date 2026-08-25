@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { IconToday, IconPipeline, IconLeads, IconReports, IconMore } from './Icons.jsx'
+import { IconToday, IconWorkQueue, IconPipeline, IconLeads, IconReports, IconMore } from './Icons.jsx'
 
 const tabs = [
-  { to: '/', label: 'Today', icon: IconToday, end: true },
+  { to: '/', label: 'Home', icon: IconToday, end: true },
+  { to: '/work', label: 'Work', icon: IconWorkQueue },
   { to: '/pipeline', label: 'Pipeline', icon: IconPipeline },
   { to: '/leads', label: 'Leads', icon: IconLeads },
   { to: '/reports/daily', label: 'Reports', icon: IconReports },
@@ -25,7 +26,7 @@ export default function BottomNav() {
                 }`
               }
             >
-              <t.icon size={22} />
+              <t.icon size={19} />
               <span className="text-[10px] font-medium tracking-tight">{t.label}</span>
             </NavLink>
           ))}

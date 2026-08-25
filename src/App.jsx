@@ -6,7 +6,8 @@ import BottomNav from './components/BottomNav.jsx'
 import PullToRefresh from './components/PullToRefresh.jsx'
 import { SplashLoader } from './components/Loader.jsx'
 import Login from './pages/Login.jsx'
-import TodayWork from './pages/TodayWork.jsx'
+import Home from './pages/Home.jsx'
+import WorkQueue from './pages/WorkQueue.jsx'
 import Pipeline from './pages/Pipeline.jsx'
 import Leads from './pages/Leads.jsx'
 import LeadDetail from './pages/LeadDetail.jsx'
@@ -48,7 +49,8 @@ export default function App() {
                 <PullToRefresh />
                 <div className="pb-24 safe-top">
                   <Routes>
-                    <Route path="/" element={<TodayWork />} />
+                    <Route path="/" element={<Home />} />
+                    <Route path="/work" element={<WorkQueue />} />
                     <Route path="/pipeline" element={<Pipeline />} />
                     <Route path="/leads" element={<Leads />} />
                     <Route path="/leads/new" element={<LeadForm />} />

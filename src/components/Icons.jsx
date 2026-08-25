@@ -24,7 +24,8 @@ import {
   MagnifyingGlass,
   Tray,
   SlidersHorizontal,
-  Calendar
+  Calendar,
+  ListChecks
 } from '@phosphor-icons/react'
 
 // `size` keeps its old per-icon default when the caller doesn't pass one;
@@ -55,3 +56,4 @@ export const IconSearch = wrap(MagnifyingGlass, 20)
 export const IconInbox = wrap(Tray, 20)
 export const IconFilter = wrap(SlidersHorizontal, 20)
 export const IconCalendar = wrap(Calendar, 18)
+export const IconWorkQueue = wrap(ListChecks, 24)

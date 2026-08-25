@@ -1,8 +1,8 @@
-// notify-followup-time — called every 15 minutes by a scheduled job
-// (see supabase/notifications_pack.sql). Finds any lead due TODAY with
-// a specific follow-up TIME set, whose time has just passed, and
+// notify-followup-time — called every minute by a scheduled job (see
+// supabase/notifications_pack.sql). Finds any lead due TODAY (in IST)
+// with a specific follow-up TIME set, whose time has just passed, and
 // notifies the assigned agent — once each, even if this runs again a
-// few minutes later (notification_log enforces that).
+// minute later (notification_log enforces that).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 
@@ -12,10 +12,37 @@ const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
 const FUNCTION_SECRET = Deno.env.get('FUNCTION_SECRET')!
-const APP_URL = Deno.env.get('APP_URL') || 'https://example.github.io/True-Homes-CRM/'
+// Always ends with exactly one trailing slash, regardless of whether the
+// secret was set with or without one — a missing/extra slash here was
+// what made notification taps land on a broken/404 link before.
+const APP_URL = (Deno.env.get('APP_URL') || 'https://example.github.io/True-Homes-CRM/').replace(/\/+$/, '/')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+// The whole point of this table is dates/times as entered by an Indian
+// agent, in IST — but this function runs on a UTC clock. Every time
+// comparison below is anchored through these two helpers instead of the
+// server's own timezone, which is what caused a 6:45 PM follow-up to
+// fire at 12:15 AM the next day (a straight 5-hour-30-minute miss).
+const IST_OFFSET_MIN = 330
+
+function nowIST() {
+  return new Date(Date.now() + IST_OFFSET_MIN * 60000)
+}
+
+function todayIST() {
+  return nowIST().toISOString().slice(0, 10)
+}
+
+// Treats `date` + `time` as IST wall-clock values and returns the actual
+// UTC instant they refer to — so it can be compared against a real
+// `Date.now()`.
+function istWallClockToUtc(dateStr: string, timeStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const [hh, mm] = timeStr.split(':').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, hh, mm, 0) - IST_OFFSET_MIN * 60000)
+}
 
 async function sendToUser(userId: string, payload: Record<string, unknown>) {
   const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId)
@@ -37,11 +64,10 @@ Deno.serve(async (req) => {
   }
 
   const now = new Date()
-  const today = now.toISOString().slice(0, 10)
-  // Catch any time inside the last 15 minutes — matches how often this
-  // is scheduled to run, so a 9:00 follow-up still fires even if this
-  // particular run happens to land at 9:07.
-  const windowStart = new Date(now.getTime() - 15 * 60000)
+  const today = todayIST()
+  // This job runs every minute — a 2-minute window comfortably covers
+  // that cadence plus a little scheduling drift, without waiting long.
+  const windowStart = new Date(now.getTime() - 2 * 60000)
 
   const { data: leads } = await supabase
     .from('leads')
@@ -52,10 +78,8 @@ Deno.serve(async (req) => {
     .not('status', 'in', '("won","lost")')
 
   for (const lead of leads || []) {
-    const [hh, mm] = String(lead.next_followup_time).split(':').map(Number)
-    const followupAt = new Date(now)
-    followupAt.setHours(hh, mm, 0, 0)
-    if (followupAt > now || followupAt < windowStart) continue
+    const followupAtUtc = istWallClockToUtc(today, String(lead.next_followup_time).slice(0, 5))
+    if (followupAtUtc > now || followupAtUtc < windowStart) continue
 
     const { error: logErr } = await supabase
       .from('notification_log')

@@ -399,6 +399,35 @@ setup conversation; short version:
 
 ---
 
+## Notification fixes + Home / Work Queue split
+
+**Timezone bug fixed** — follow-up time notifications were firing ~5.5 hours late (a 6:45 PM
+follow-up notified at 12:15 AM the next day). The Edge Functions were comparing times on the
+server's UTC clock instead of IST; both time-based functions now convert properly. Also switched
+the follow-up check from every 15 minutes to every minute, so a notification now arrives within
+about a minute of the time you set, not up to 15 minutes late.
+
+**Notification tap → 404 fixed** — the link a notification opens is now built from your `APP_URL`
+Edge Function secret with the slash always normalized correctly. Double check that secret is set to
+your real app URL (e.g. `https://yourusername.github.io/True-Homes-CRM/`).
+
+**Midnight overdue fix** — a follow-up now turns overdue right at 12:00 AM instead of only updating
+the next time the app happens to reload data.
+
+**New: Work Queue page** — Home is now just the dashboard (Site Visit ring + metrics), clean, no
+lists. A new **Work** tab in the bottom nav opens a dedicated page with three clearly separate
+sections: **Overdue**, **Today**, and **New Leads** — each with its own count and empty state.
+
+**Setup for the notification fixes:**
+1. Supabase → **Edge Functions** → re-deploy `notify-followup-time`, `notify-morning-digest`, and
+   `notify-new-lead` with the updated code in `supabase/functions/`.
+2. Double-check the `APP_URL` secret is your real app URL, ending in `/`.
+3. Run `supabase/reschedule_followup_check.sql` to switch the check to every minute.
+4. Upload the changed frontend files and redeploy as usual — no new SQL needed for the Home/Work
+   Queue split, it's purely a navigation change.
+
+---
+
 ## Project structure
 
 ```

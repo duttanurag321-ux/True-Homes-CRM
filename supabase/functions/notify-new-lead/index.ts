@@ -11,7 +11,7 @@ const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
 const FUNCTION_SECRET = Deno.env.get('FUNCTION_SECRET')!
-const APP_URL = Deno.env.get('APP_URL') || 'https://example.github.io/True-Homes-CRM/'
+const APP_URL = (Deno.env.get('APP_URL') || 'https://example.github.io/True-Homes-CRM/').replace(/\/+$/, '/')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)

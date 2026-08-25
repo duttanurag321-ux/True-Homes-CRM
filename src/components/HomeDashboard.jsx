@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import RingProgress from './RingProgress.jsx'
+import { setPersisted } from '../lib/usePersistedState.js'
 import { PageLoader } from './Loader.jsx'
 import { IconFire, IconInbox } from './Icons.jsx'
 import { todayStr, localDayBoundsUTC, localMonthBoundsUTC, formatTime } from '../lib/helpers.js'
@@ -179,7 +180,9 @@ export default function HomeDashboard() {
 
       {/* Secondary metrics — smaller, supporting */}
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="Leads to Call" value={data.uncalledCount} hint="Never contacted yet" />
+        <Link to="/work" onClick={() => setPersisted('workqueue:tab', 'new')} className="press">
+          <StatTile label="Leads to Call" value={data.uncalledCount} hint="Never contacted yet" />
+        </Link>
         <StatTile label="New Leads Today" value={data.newLeadsToday} />
         <StatTile
           label="Hot Leads"
