@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>True Homes</title>
+    <script type="text/javascript">
+      // GitHub Pages only knows about real files — it has no idea "/leads/abc123"
+      // is a page this app can render client-side, so it serves this 404 file
+      // instead. This redirects back to index.html with the intended path
+      // tucked into a query string, and a matching script in index.html
+      // restores it before the app renders — the standard workaround for
+      // single-page apps on GitHub Pages (see rafgraph/spa-github-pages).
+      var pathSegmentsToKeep = 1 // keep "/True-Homes-CRM" as the app's base
+
+      var l = window.location
+      l.replace(
+        l.protocol +
+          '//' +
+          l.hostname +
+          (l.port ? ':' + l.port : '') +
+          l.pathname
+            .split('/')
+            .slice(0, 1 + pathSegmentsToKeep)
+            .join('/') +
+          '/?/' +
+          l.pathname
+            .slice(1)
+            .split('/')
+            .slice(pathSegmentsToKeep)
+            .join('/')
+            .replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+      )
+    </script>
+  </head>
+  <body></body>
+</html>

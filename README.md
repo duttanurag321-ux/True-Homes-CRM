@@ -428,6 +428,18 @@ sections: **Overdue**, **Today**, and **New Leads** — each with its own count 
 
 ---
 
+## Fixed: notification taps landing on a GitHub 404
+
+This wasn't a wrong URL — it's a real GitHub Pages limitation. GitHub Pages only knows about actual
+files; it has no idea `/leads/abc123` is a page this app can render, so any *direct* link into the
+app (a notification tap, a bookmark, a shared link) hit GitHub's own 404 page instead of the app.
+Fixed with the standard workaround for single-page apps on GitHub Pages: `public/404.html` catches
+the unknown path and redirects back to the app with it preserved, and a small script in `index.html`
+restores it before the app renders. No SQL or Edge Function changes needed — purely frontend.
+Redeploy as usual and notification taps (and any other direct link) should open the right page.
+
+---
+
 ## Project structure
 
 ```

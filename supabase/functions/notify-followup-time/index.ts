@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
 
     const { error: logErr } = await supabase
       .from('notification_log')
-      .insert({ kind: 'followup_time', lead_id: lead.id, user_id: lead.assigned_to, sent_for_date: today })
-    if (logErr) continue // already sent today for this lead — the unique index rejected it, skip silently
+      .insert({ kind: 'followup_time', lead_id: lead.id, user_id: lead.assigned_to, sent_for_date: today, detail: String(lead.next_followup_time).slice(0, 5) })
+    if (logErr) continue // already sent for this exact lead+time today — the unique index rejected it, skip silently
 
     await sendToUser(lead.assigned_to, {
       title: 'Follow-up time',
