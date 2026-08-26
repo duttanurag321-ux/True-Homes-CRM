@@ -95,7 +95,7 @@ export default function LeadDetail() {
   if (loading || !lead) {
     return (
       <div>
-        <TopBar title="Lead" back />
+        <TopBar title="Lead" back fallback="/leads" />
         <PageLoader label="Loading lead…" />
       </div>
     )
@@ -106,6 +106,7 @@ export default function LeadDetail() {
       <TopBar
         title={lead.name}
         back
+        fallback="/leads"
         right={
           <Link to={`/leads/${id}/edit`} className="text-accent text-sm font-semibold press">
             Edit
