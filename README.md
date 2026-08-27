@@ -440,6 +440,23 @@ Redeploy as usual and notification taps (and any other direct link) should open 
 
 ---
 
+## Meta (Facebook) Conversions API — lead quality feedback
+
+Sends Qualified / Site Visit / Booking milestones back to Meta automatically, using the Facebook
+Lead ID and ad/campaign/form attribution your Google Sheet already receives — no extra clicking, no
+re-fetching data from Meta. Full setup walkthrough is in the setup conversation; short version:
+
+1. Run `supabase/meta_conversions_pack.sql`, then `supabase/schedule_meta_conversions.sql`.
+2. Deploy `supabase/functions/send-meta-conversions/` as an Edge Function.
+3. Set secrets: `META_PIXEL_ID`, `META_ACCESS_TOKEN` (from Meta Events Manager), plus the existing
+   `FUNCTION_SECRET`.
+4. Update the Apps Script with the new `google-apps-script/import-leads.gs` — it now carries the
+   Meta attribution columns through into Supabase.
+5. Marking a lead "Interested" (Qualified), "SV Done" (Site Visit), or "Won" (Booking) automatically
+   queues the event — a background job sends it within ~2 minutes.
+
+---
+
 ## Project structure
 
 ```

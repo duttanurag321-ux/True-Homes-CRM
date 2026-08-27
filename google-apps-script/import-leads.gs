@@ -45,7 +45,23 @@ const COLUMN_ALIASES = {
   name: ['name', 'full name', 'full_name', 'lead name'],
   phone: ['phone', 'phone number', 'phone_number', 'mobile', 'contact number'],
   notes: ['notes', 'message', 'comments', 'query'],
-  source: ['source', 'campaign', 'ad name']
+  source: ['source', 'campaign', 'ad name'],
+  // Meta/Facebook attribution — these match the exact column names
+  // Facebook Lead Ads writes into the sheet. Carried straight through
+  // onto the lead in Supabase so it's never lost, and so the CRM can
+  // later send Conversions API events back to Meta using it.
+  metaLeadId: ['id', 'lead id', 'lead_id'],
+  metaCreatedTime: ['created_time', 'created time'],
+  metaAdId: ['ad_id', 'ad id'],
+  metaAdName: ['ad_name', 'ad name'],
+  metaAdsetId: ['adset_id', 'ad set id', 'adset id'],
+  metaAdsetName: ['adset_name', 'ad set name', 'adset name'],
+  metaCampaignId: ['campaign_id', 'campaign id'],
+  metaCampaignName: ['campaign_name', 'campaign name'],
+  metaFormId: ['form_id', 'form id'],
+  metaFormName: ['form_name', 'form name'],
+  metaIsOrganic: ['is_organic', 'is organic', 'organic'],
+  metaPlatform: ['platform']
 }
 
 const DEFAULT_SOURCE = 'Facebook Ads' // must match a value in src/lib/constants.js LEAD_SOURCES
@@ -80,6 +96,13 @@ function importNewLeads() {
   const phoneCol = findColumn(headerRow, COLUMN_ALIASES.phone)
   const notesCol = findColumn(headerRow, COLUMN_ALIASES.notes)
   const sourceCol = findColumn(headerRow, COLUMN_ALIASES.source)
+
+  // Meta attribution columns — all optional; a sheet without them (e.g.
+  // your manual, non-Facebook sheet) just won't populate these fields.
+  const metaCols = {}
+  for (const key of Object.keys(COLUMN_ALIASES)) {
+    if (key.indexOf('meta') === 0) metaCols[key] = findColumn(headerRow, COLUMN_ALIASES[key])
+  }
 
   if (nameCol === -1 || phoneCol === -1) {
     Logger.log('ERROR: Could not find a Name and/or Phone column. Check COLUMN_ALIASES matches your header row.')
@@ -120,24 +143,34 @@ function importNewLeads() {
 
       const notes = notesCol !== -1 ? String(row[notesCol] || '').trim() : ''
       const source = sourceCol !== -1 && row[sourceCol] ? String(row[sourceCol]).trim() : DEFAULT_SOURCE
+      const metaFields = buildMetaFields(row, metaCols)
+
+      if (metaFields.meta_lead_id && metaLeadIdExists(SUPABASE_URL, SERVICE_KEY, metaFields.meta_lead_id)) {
+        sheet.getRange(sheetRow, colIndex.imported + 1).setValue('Duplicate — Meta Lead ID already in CRM')
+        skippedDuplicate++
+        continue
+      }
 
       // Left unassigned on purpose — it lands in the Lead Pool, and an
       // admin assigns it (specific agent or Round Robin) from there.
       // Also left with no follow-up date: it sits in "New Leads" until
       // the assigned agent logs the first call, same as any other lead.
-      const payload = {
-        name,
-        phone: rawPhone,
-        source,
-        notes: notes || null,
-        status: 'new',
-        call_status: null, // no calls made yet — CRM shows this as "No calls yet", i.e. pending
-        next_action: null,
-        next_followup_date: null,
-        origin: 'facebook',
-        assigned_to: null,
-        created_by: adminId
-      }
+      const payload = Object.assign(
+        {
+          name,
+          phone: rawPhone,
+          source,
+          notes: notes || null,
+          status: 'new',
+          call_status: null, // no calls made yet — CRM shows this as "No calls yet", i.e. pending
+          next_action: null,
+          next_followup_date: null,
+          origin: 'facebook',
+          assigned_to: null,
+          created_by: adminId
+        },
+        metaFields
+      )
 
       insertLead(SUPABASE_URL, SERVICE_KEY, payload)
 
@@ -185,6 +218,39 @@ function findColumn(headerRow, aliases) {
   return -1
 }
 
+/** Reads whichever Meta attribution columns exist in this row into the Supabase field names. */
+function buildMetaFields(row, metaCols) {
+  const get = (col) => (col !== -1 && row[col] !== '' && row[col] != null ? String(row[col]).trim() : null)
+
+  const isOrganicRaw = get(metaCols.metaIsOrganic)
+  let isOrganic = null
+  if (isOrganicRaw !== null) {
+    isOrganic = ['true', 'yes', '1'].indexOf(isOrganicRaw.toLowerCase()) !== -1
+  }
+
+  let createdTime = null
+  const createdRaw = metaCols.metaCreatedTime !== -1 ? row[metaCols.metaCreatedTime] : null
+  if (createdRaw) {
+    const d = createdRaw instanceof Date ? createdRaw : new Date(createdRaw)
+    if (!isNaN(d.getTime())) createdTime = d.toISOString()
+  }
+
+  return {
+    meta_lead_id: get(metaCols.metaLeadId),
+    meta_created_time: createdTime,
+    meta_ad_id: get(metaCols.metaAdId),
+    meta_ad_name: get(metaCols.metaAdName),
+    meta_adset_id: get(metaCols.metaAdsetId),
+    meta_adset_name: get(metaCols.metaAdsetName),
+    meta_campaign_id: get(metaCols.metaCampaignId),
+    meta_campaign_name: get(metaCols.metaCampaignName),
+    meta_form_id: get(metaCols.metaFormId),
+    meta_form_name: get(metaCols.metaFormName),
+    meta_is_organic: isOrganic,
+    meta_platform: get(metaCols.metaPlatform)
+  }
+}
+
 // ---- Supabase REST helpers -------------------------------------------
 
 function supabaseHeaders(serviceKey, extra) {
@@ -204,6 +270,16 @@ function leadExists(url, key, phoneDigits) {
     { method: 'get', headers: supabaseHeaders(key), muteHttpExceptions: true }
   )
   if (resp.getResponseCode() >= 300) throw new Error('Dedup check failed: ' + resp.getContentText())
+  const data = JSON.parse(resp.getContentText())
+  return Array.isArray(data) && data.length > 0
+}
+
+function metaLeadIdExists(url, key, metaLeadId) {
+  const resp = UrlFetchApp.fetch(
+    `${url}/rest/v1/leads?select=id&meta_lead_id=eq.${encodeURIComponent(metaLeadId)}&limit=1`,
+    { method: 'get', headers: supabaseHeaders(key), muteHttpExceptions: true }
+  )
+  if (resp.getResponseCode() >= 300) throw new Error('Meta Lead ID dedup check failed: ' + resp.getContentText())
   const data = JSON.parse(resp.getContentText())
   return Array.isArray(data) && data.length > 0
 }

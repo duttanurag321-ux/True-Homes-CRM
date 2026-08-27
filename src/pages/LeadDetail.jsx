@@ -146,6 +146,29 @@ export default function LeadDetail() {
           {lead.notes && <Row label="Notes" value={lead.notes} />}
         </div>
 
+        {lead.meta_lead_id && (
+          <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold mb-1">
+              <span className="text-accent">📘</span>
+              Facebook Ad Info
+            </div>
+            <Row label="Meta Lead ID" value={lead.meta_lead_id} mono />
+            {lead.meta_campaign_name && <Row label="Campaign" value={lead.meta_campaign_name} />}
+            {lead.meta_adset_name && <Row label="Ad Set" value={lead.meta_adset_name} />}
+            {lead.meta_ad_name && <Row label="Ad" value={lead.meta_ad_name} />}
+            {lead.meta_form_name && <Row label="Form" value={lead.meta_form_name} />}
+            {lead.meta_platform && <Row label="Platform" value={lead.meta_platform} />}
+            {lead.meta_is_organic !== null && lead.meta_is_organic !== undefined && (
+              <Row label="Organic" value={lead.meta_is_organic ? 'Yes' : 'No (paid)'} />
+            )}
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-line flex-wrap">
+              {lead.qualified_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Qualified sent to Meta</span>}
+              {lead.site_visit_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Site Visit sent to Meta</span>}
+              {lead.booking_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Booking sent to Meta</span>}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
           <div className="flex items-center gap-2 text-sm font-semibold mb-1">
             <IconCalendar size={16} className="text-accent" />
@@ -253,12 +276,12 @@ export default function LeadDetail() {
   )
 }
 
-function Row({ label, value, sub }) {
+function Row({ label, value, sub, mono }) {
   return (
     <div className="flex items-start justify-between gap-4 text-sm">
       <span className="text-muted flex-shrink-0">{label}</span>
       <div className="text-right">
-        <p className="font-medium">{value}</p>
+        <p className={`font-medium ${mono ? 'font-mono text-xs' : ''}`}>{value}</p>
         {sub && <p className="text-xs text-muted">{sub}</p>}
       </div>
     </div>
