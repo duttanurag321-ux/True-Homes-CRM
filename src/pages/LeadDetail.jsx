@@ -7,7 +7,7 @@ import Sheet from '../components/Sheet.jsx'
 import { StagePill, OutcomePill } from '../components/Pills.jsx'
 import FollowUpSheet from '../components/FollowUpSheet.jsx'
 import { PageLoader } from '../components/Loader.jsx'
-import { IconWhatsapp, IconCall, IconCalendar } from '../components/Icons.jsx'
+import { IconWhatsapp, IconCall, IconCalendar, IconChevron } from '../components/Icons.jsx'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 import {
   displayPhone,
@@ -28,6 +28,7 @@ export default function LeadDetail() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [showMetaInfo, setShowMetaInfo] = useState(false)
   const [agents, setAgents] = useState([])
   const [transferOpen, setTransferOpen] = useState(false)
   const [transferring, setTransferring] = useState(false)
@@ -148,24 +149,34 @@ export default function LeadDetail() {
 
         {lead.meta_lead_id && (
           <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold mb-1">
-              <span className="text-accent">📘</span>
-              Facebook Ad Info
-            </div>
-            <Row label="Meta Lead ID" value={lead.meta_lead_id} mono />
-            {lead.meta_campaign_name && <Row label="Campaign" value={lead.meta_campaign_name} />}
-            {lead.meta_adset_name && <Row label="Ad Set" value={lead.meta_adset_name} />}
-            {lead.meta_ad_name && <Row label="Ad" value={lead.meta_ad_name} />}
-            {lead.meta_form_name && <Row label="Form" value={lead.meta_form_name} />}
-            {lead.meta_platform && <Row label="Platform" value={lead.meta_platform} />}
-            {lead.meta_is_organic !== null && lead.meta_is_organic !== undefined && (
-              <Row label="Organic" value={lead.meta_is_organic ? 'Yes' : 'No (paid)'} />
+            <button
+              onClick={() => setShowMetaInfo((v) => !v)}
+              className="press w-full flex items-center justify-between text-sm font-semibold"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-accent">📘</span>
+                Facebook Ad Info
+              </span>
+              <IconChevron size={14} className={`text-muted transition-transform ${showMetaInfo ? 'rotate-90' : ''}`} />
+            </button>
+            {showMetaInfo && (
+              <div className="mt-3 pt-3 border-t border-line space-y-2">
+                <Row label="Meta Lead ID" value={lead.meta_lead_id} mono />
+                {lead.meta_campaign_name && <Row label="Campaign" value={lead.meta_campaign_name} />}
+                {lead.meta_adset_name && <Row label="Ad Set" value={lead.meta_adset_name} />}
+                {lead.meta_ad_name && <Row label="Ad" value={lead.meta_ad_name} />}
+                {lead.meta_form_name && <Row label="Form" value={lead.meta_form_name} />}
+                {lead.meta_platform && <Row label="Platform" value={lead.meta_platform} />}
+                {lead.meta_is_organic !== null && lead.meta_is_organic !== undefined && (
+                  <Row label="Organic" value={lead.meta_is_organic ? 'Yes' : 'No (paid)'} />
+                )}
+                <div className="flex items-center gap-1.5 pt-2 border-t border-line flex-wrap">
+                  {lead.qualified_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Qualified sent to Meta</span>}
+                  {lead.site_visit_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Site Visit sent to Meta</span>}
+                  {lead.booking_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Booking sent to Meta</span>}
+                </div>
+              </div>
             )}
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-line flex-wrap">
-              {lead.qualified_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Qualified sent to Meta</span>}
-              {lead.site_visit_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Site Visit sent to Meta</span>}
-              {lead.booking_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Booking sent to Meta</span>}
-            </div>
           </div>
         )}
 
