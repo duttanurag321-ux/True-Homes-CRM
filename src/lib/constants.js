@@ -48,6 +48,17 @@ export const LEAD_ORIGINS = [
 ]
 export const LEAD_ORIGIN_MAP = Object.fromEntries(LEAD_ORIGINS.map((o) => [o.key, o]))
 
+// Shared minimal column set for LIST views (Leads, Lead Pool, Pipeline,
+// Work Queue) — these render via LeadCard/PoolRow, which never touch
+// notes, the Meta attribution fields, or other detail-only columns.
+// Fetching only what's actually displayed cuts the data transferred on
+// every list load/refresh/realtime update substantially — those add up
+// fast across many agents and frequent refreshes, unlike LeadDetail's
+// single-row select('*'), which stays as-is since it's one row and
+// genuinely needs everything.
+export const LEAD_LIST_COLUMNS =
+  'id,name,phone,status,call_status,budget_max,katha,next_followup_date,next_followup_time,next_action,location_preference,source,assigned_to,origin,created_at'
+
 // Why the lead is buying — set after the first real conversation, not at
 // creation, since you usually don't know this until you've actually
 // spoken to them.

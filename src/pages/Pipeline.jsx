@@ -5,7 +5,7 @@ import TopBar from '../components/TopBar.jsx'
 import LeadCard from '../components/LeadCard.jsx'
 import { ListSkeleton } from '../components/Loader.jsx'
 import { usePersistedState } from '../lib/usePersistedState.js'
-import { OPEN_STAGES, STAGE_MAP } from '../lib/constants.js'
+import { OPEN_STAGES, STAGE_MAP, LEAD_LIST_COLUMNS } from '../lib/constants.js'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function Pipeline() {
@@ -20,7 +20,7 @@ export default function Pipeline() {
     // active pipeline. Nothing is deleted, they just don't clutter here.
     const { data } = await supabase
       .from('leads')
-      .select('*')
+      .select(LEAD_LIST_COLUMNS)
       .eq('assigned_to', user.id)
       .not('status', 'in', '("won","lost")')
       .order('updated_at', { ascending: false })

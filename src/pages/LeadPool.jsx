@@ -8,7 +8,7 @@ import { ListSkeleton } from '../components/Loader.jsx'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconSearch, IconCalendar } from '../components/Icons.jsx'
 import { displayPhone, formatDateHuman, formatINRCompact, toLocalDateStr } from '../lib/helpers.js'
-import { LEAD_ORIGINS, LEAD_ORIGIN_MAP } from '../lib/constants.js'
+import { LEAD_ORIGINS, LEAD_ORIGIN_MAP, LEAD_LIST_COLUMNS } from '../lib/constants.js'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function LeadPool() {
@@ -27,7 +27,7 @@ export default function LeadPool() {
   const load = useCallback(async () => {
     setLoading(true)
     const [{ data: pool }, { data: agentRows }] = await Promise.all([
-      supabase.from('leads').select('*').is('assigned_to', null).order('created_at', { ascending: false }),
+      supabase.from('leads').select(LEAD_LIST_COLUMNS).is('assigned_to', null).order('created_at', { ascending: false }),
       supabase.from('profiles').select('id,full_name,email,receiving_leads').eq('role', 'agent').order('full_name')
     ])
     setLeads(pool || [])
@@ -43,17 +43,12 @@ export default function LeadPool() {
   // Lets the pull-down-to-refresh gesture re-run this page's own load().
   useRegisterRefresh(load)
 
-  // Live updates: a lead landing in the pool (e.g. a fresh Facebook
-  // import) or leaving it (another admin just assigned it) should show
-  // up here without a manual refresh.
-  useEffect(() => {
-    if (!user?.id || profile?.role !== 'admin') return
-    const channel = supabase
-      .channel('lead-pool-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => load())
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [user?.id, profile?.role, load])
+  // A realtime subscription used to live here, watching the entire
+  // leads table with no filter — meaning every change to ANY lead by
+  // ANY agent broadcast its full row to every admin with this page
+  // open. That's a lot of unnecessary data transfer for a page you
+  // check occasionally, not one that needs to update within a second.
+  // Pull-to-refresh (above) covers this now.
 
   // Admin-only page — the RLS policy on `leads` already hides
   // unassigned rows from non-admins (an agent's `assigned_to = auth.uid()`

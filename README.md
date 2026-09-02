@@ -457,6 +457,26 @@ re-fetching data from Meta. Full setup walkthrough is in the setup conversation;
 
 ---
 
+## Fixed: Supabase Fair Use / egress quota warning
+
+Three changes, aimed at the actual biggest drivers of unnecessary data transfer:
+
+1. **Two unfiltered realtime subscriptions** — Home dashboard was watching *every* activity logged
+   by *any* agent, and Lead Pool was watching *every* change to the entire leads table. Realtime
+   broadcasts the full row of every change to every connected device, bypassing any column
+   selection entirely — with Home being the default screen open all day, this was likely the
+   single biggest contributor. Both now rely on pull-to-refresh instead of a live subscription.
+2. **The follow-up-time check was running every 5 seconds, 24/7** (~17,000 calls/day) — dialed back
+   to once a minute (~1,440 calls/day).
+3. **List pages were fetching every column on every lead**, including ones never displayed there
+   (notes, all 12 Meta attribution fields) — trimmed to only what's shown. A lead's own detail page
+   is unaffected, since it's only ever one row.
+
+**Setup:** Supabase → SQL Editor → run `supabase/fix_egress_reschedule.sql`. Then upload the changed
+frontend files and redeploy as usual. No other setup needed.
+
+---
+
 ## Project structure
 
 ```

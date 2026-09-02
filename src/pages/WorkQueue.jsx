@@ -11,6 +11,7 @@ import { usePersistedState } from '../lib/usePersistedState.js'
 import { useMidnightRefresh } from '../lib/useMidnightRefresh.js'
 import { IconFire } from '../components/Icons.jsx'
 import { todayStr, localDayBoundsUTC } from '../lib/helpers.js'
+import { LEAD_LIST_COLUMNS } from '../lib/constants.js'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function WorkQueue() {
@@ -34,7 +35,7 @@ export default function WorkQueue() {
     const [{ data: overdue }, { data: dueToday }, { data: fresh }, { data: todaysActivities }] = await Promise.all([
       supabase
         .from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .eq('assigned_to', user.id)
         .lt('next_followup_date', today)
         .not('call_status', 'is', null)
@@ -43,7 +44,7 @@ export default function WorkQueue() {
         .order('next_followup_time', { ascending: true, nullsFirst: false }),
       supabase
         .from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .eq('assigned_to', user.id)
         .eq('next_followup_date', today)
         .not('call_status', 'is', null)
@@ -53,7 +54,7 @@ export default function WorkQueue() {
       // completely separate from either follow-up list.
       supabase
         .from('leads')
-        .select('*')
+        .select(LEAD_LIST_COLUMNS)
         .eq('assigned_to', user.id)
         .is('call_status', null)
         .not('status', 'in', '("won","lost")')

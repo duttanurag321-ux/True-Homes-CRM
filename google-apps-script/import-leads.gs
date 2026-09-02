@@ -1,13 +1,15 @@
 /**
  * Broker CRM — Automatic Lead Importer
  * ------------------------------------
- * Watches a Google Sheet (where Facebook leads land) and pushes every new
- * row into the Supabase `leads` table as an UNASSIGNED lead in the app's
- * Lead Pool — dedups by phone, and marks the row as imported so it's
- * never processed twice. Assigning leads to agents (specific agent or
- * round robin) now happens from the Lead Pool screen in the app itself,
- * not from this script — that way it always uses your current agent
- * list and each agent's "Receiving Leads" toggle.
+ * Watches every tab in this Google Sheet (Facebook can drop leads into
+ * Sheet1, Sheet2, or several tabs at once depending on which form/ad
+ * they came through) and pushes every new row into the Supabase `leads`
+ * table as an UNASSIGNED lead in the app's Lead Pool — dedups by phone
+ * and Meta Lead ID, and marks each row as imported so it's never
+ * processed twice. Assigning leads to agents (specific agent or round
+ * robin) happens from the Lead Pool screen in the app itself, not from
+ * this script — that way it always uses your current agent list and
+ * each agent's "Receiving Leads" toggle.
  *
  * SETUP (one-time)
  * 1. Open your Google Sheet → Extensions → Apps Script.
@@ -19,17 +21,32 @@
  *    or a public repo — it bypasses all security rules, by design, so
  *    the importer can write leads. Script Properties keeps it private to
  *    this script.
- * 4. Update SHEET_NAME below if your tab isn't called "Sheet1".
+ * 4. If you have a tab that is NOT a lead sheet (e.g. a "Notes" or
+ *    "Summary" tab) and you'd rather it be skipped outright instead of
+ *    just being silently ignored (see how sheets are chosen, below),
+ *    add its exact tab name to SHEETS_TO_SKIP.
  * 5. Update COLUMN_ALIASES below if your header names differ from the
- *    guesses (name/phone especially — those are required).
+ *    guesses (name/phone especially — those are required per sheet).
  * 6. Run `importNewLeads` once manually (Run ▶ button, pick
  *    importNewLeads) and grant the permissions it asks for. Check the
- *    Execution log for a summary line.
+ *    Execution log for a per-sheet summary.
  * 7. Run `setupTrigger` once — this schedules importNewLeads to run
  *    automatically every 5 minutes from then on. That's it.
+ *
+ * HOW MULTIPLE TABS ARE HANDLED
+ * Every run scans EVERY tab in this spreadsheet. A tab is treated as a
+ * lead sheet if it has recognizable Name and Phone columns (per
+ * COLUMN_ALIASES below) — if it doesn't, that tab is just skipped, no
+ * error, nothing to configure. This means: if Facebook starts dropping
+ * leads into a brand-new "Sheet3" tomorrow, nothing needs to change
+ * here — the next run picks it up automatically, as long as its header
+ * row has Name and Phone columns like your other tabs.
  */
 
-const SHEET_NAME = 'Sheet1' // change if your leads land on a different tab
+// Exact tab names to skip entirely, even if they happen to have
+// Name/Phone-like columns (rare, but here as a safety valve). Leave
+// empty ([]) to scan every tab, which is fine for most setups.
+const SHEETS_TO_SKIP = []
 
 // Header names this script writes/reads for its own bookkeeping. If a
 // sheet doesn't have these columns yet, they're added automatically the
@@ -43,7 +60,11 @@ const COL_IMPORTED_AT = 'Imported At'
 // "full_name" / "phone_number".
 const COLUMN_ALIASES = {
   name: ['name', 'full name', 'full_name', 'lead name'],
-  phone: ['phone', 'phone number', 'phone_number', 'mobile', 'contact number'],
+  // Locked to your exact column header on purpose — every one of your
+  // sheets uses "Mobile Number" specifically, so this no longer
+  // matches "phone", "phone number", "contact number", etc., even if
+  // a sheet happens to have one of those too.
+  phone: ['mobile number'],
   notes: ['notes', 'message', 'comments', 'query'],
   source: ['source', 'campaign', 'ad name'],
   // Meta/Facebook attribution — these match the exact column names
@@ -76,24 +97,66 @@ function importNewLeads() {
     return
   }
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME)
-  if (!sheet) {
-    Logger.log(`ERROR: No sheet named "${SHEET_NAME}" found.`)
+  const sheets = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheets()
+    .filter((s) => SHEETS_TO_SKIP.indexOf(s.getName()) === -1)
+
+  if (sheets.length === 0) {
+    Logger.log('No sheets to scan (check SHEETS_TO_SKIP).')
     return
   }
 
-  const { headerRow, colIndex } = ensureBookkeepingColumns(sheet)
-  const lastRow = sheet.getLastRow()
-  if (lastRow < 2) {
-    Logger.log('No data rows yet.')
-    return
+  // Fetched once per run, reused across every tab — no need to look it
+  // up per sheet.
+  const adminId = fetchAdminId(SUPABASE_URL, SERVICE_KEY)
+
+  const totals = { imported: 0, skippedDuplicate: 0, skippedInvalid: 0, failed: 0, sheetsScanned: 0, sheetsIgnored: 0 }
+
+  for (const sheet of sheets) {
+    const result = importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId)
+    if (result.ignored) {
+      totals.sheetsIgnored++
+      continue
+    }
+    totals.sheetsScanned++
+    totals.imported += result.imported
+    totals.skippedDuplicate += result.skippedDuplicate
+    totals.skippedInvalid += result.skippedInvalid
+    totals.failed += result.failed
   }
+
+  Logger.log(
+    `Import run complete across ${totals.sheetsScanned} sheet(s) (${totals.sheetsIgnored} tab(s) had no Name/Phone columns and were skipped) — ` +
+      `imported: ${totals.imported}, duplicates skipped: ${totals.skippedDuplicate}, invalid skipped: ${totals.skippedInvalid}, failed: ${totals.failed}`
+  )
+}
+
+/** Imports new leads from a single sheet/tab. Returns { ignored: true } if this tab isn't a lead sheet at all. */
+function importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId) {
+  const sheetLabel = sheet.getName()
+  const lastCol = sheet.getLastColumn()
+  if (lastCol === 0) return { ignored: true } // completely empty tab
+
+  let headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+
+  const nameCol = findColumn(headerRow, COLUMN_ALIASES.name)
+  const phoneCol = findColumn(headerRow, COLUMN_ALIASES.phone)
+
+  if (nameCol === -1 || phoneCol === -1) {
+    // Not a lead sheet (or headers don't match yet) — quietly skip. This
+    // is what lets new/unrelated tabs coexist without any setup.
+    return { ignored: true }
+  }
+
+  const { headerRow: updatedHeaderRow, colIndex } = ensureBookkeepingColumns(sheet, headerRow)
+  headerRow = updatedHeaderRow
+
+  const lastRow = sheet.getLastRow()
+  if (lastRow < 2) return { ignored: false, imported: 0, skippedDuplicate: 0, skippedInvalid: 0, failed: 0 }
 
   const range = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn())
   const values = range.getValues()
 
-  const nameCol = findColumn(headerRow, COLUMN_ALIASES.name)
-  const phoneCol = findColumn(headerRow, COLUMN_ALIASES.phone)
   const notesCol = findColumn(headerRow, COLUMN_ALIASES.notes)
   const sourceCol = findColumn(headerRow, COLUMN_ALIASES.source)
 
@@ -103,15 +166,6 @@ function importNewLeads() {
   for (const key of Object.keys(COLUMN_ALIASES)) {
     if (key.indexOf('meta') === 0) metaCols[key] = findColumn(headerRow, COLUMN_ALIASES[key])
   }
-
-  if (nameCol === -1 || phoneCol === -1) {
-    Logger.log('ERROR: Could not find a Name and/or Phone column. Check COLUMN_ALIASES matches your header row.')
-    return
-  }
-
-  // Cache today's admin (used as created_by) once per run instead of once
-  // per row.
-  const adminId = fetchAdminId(SUPABASE_URL, SERVICE_KEY)
 
   let imported = 0,
     skippedDuplicate = 0,
@@ -180,21 +234,22 @@ function importNewLeads() {
     } catch (err) {
       // Never let one bad row stop the rest of the batch.
       sheet.getRange(sheetRow, colIndex.imported + 1).setValue('ERROR — ' + String(err).slice(0, 200))
-      Logger.log(`Row ${sheetRow} failed: ${err}`)
+      Logger.log(`[${sheetLabel}] Row ${sheetRow} failed: ${err}`)
       failed++
     }
   }
 
-  Logger.log(
-    `Import run complete — imported: ${imported}, duplicates skipped: ${skippedDuplicate}, invalid skipped: ${skippedInvalid}, failed: ${failed}`
-  )
+  if (imported || skippedDuplicate || skippedInvalid || failed) {
+    Logger.log(
+      `[${sheetLabel}] imported: ${imported}, duplicates skipped: ${skippedDuplicate}, invalid skipped: ${skippedInvalid}, failed: ${failed}`
+    )
+  }
+
+  return { ignored: false, imported, skippedDuplicate, skippedInvalid, failed }
 }
 
-/** Adds Imported / Imported At / Assigned Agent columns if missing, returns their positions. */
-function ensureBookkeepingColumns(sheet) {
-  const lastCol = sheet.getLastColumn()
-  let headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
-
+/** Adds Imported / Imported At columns if missing, returns their positions. */
+function ensureBookkeepingColumns(sheet, headerRow) {
   function ensure(name) {
     let idx = headerRow.findIndex((h) => String(h).trim().toLowerCase() === name.toLowerCase())
     if (idx === -1) {
@@ -316,7 +371,7 @@ function setupTrigger() {
     if (t.getHandlerFunction() === 'importNewLeads') ScriptApp.deleteTrigger(t)
   })
   ScriptApp.newTrigger('importNewLeads').timeBased().everyMinutes(5).create()
-  Logger.log('Trigger installed — importNewLeads will now run every 5 minutes.')
+  Logger.log('Trigger installed — importNewLeads will now run every 5 minutes, scanning every tab.')
 }
 
 /** Optional: run this if you ever want to stop automatic imports. */

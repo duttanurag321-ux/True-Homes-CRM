@@ -9,7 +9,7 @@ import { ListSkeleton } from '../components/Loader.jsx'
 import { useLeadsRealtime } from '../lib/useLeadsRealtime.js'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconPlus, IconUpload, IconSearch, IconFilter, IconInbox } from '../components/Icons.jsx'
-import { STAGES, CALL_OUTCOMES, LEAD_SOURCES } from '../lib/constants.js'
+import { STAGES, CALL_OUTCOMES, LEAD_SOURCES, LEAD_LIST_COLUMNS } from '../lib/constants.js'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '' }
@@ -36,7 +36,7 @@ export default function Leads() {
     // Admins manage the whole team's book here (needed to bulk-delete or
     // review across agents); everyone else still only ever sees their own
     // assigned leads, exactly as before.
-    let q = supabase.from('leads').select('*').order('created_at', { ascending: false })
+    let q = supabase.from('leads').select(LEAD_LIST_COLUMNS).order('created_at', { ascending: false })
     if (!isAdmin) q = q.eq('assigned_to', user.id)
     const { data } = await q
     setLeads(data || [])

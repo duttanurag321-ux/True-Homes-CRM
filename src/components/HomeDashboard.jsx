@@ -8,6 +8,7 @@ import { PageLoader } from './Loader.jsx'
 import { IconFire, IconInbox } from './Icons.jsx'
 import { todayStr, localDayBoundsUTC, localMonthBoundsUTC, formatTime } from '../lib/helpers.js'
 import { STAGES } from '../lib/constants.js'
+import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 const STAGE_ORDER = STAGES.map((s) => s.key)
 const SV_DONE_RANK = STAGE_ORDER.indexOf('sv_done')
@@ -121,16 +122,16 @@ export default function HomeDashboard() {
     load()
   }, [load])
 
-  // Site Visit completion is driven entirely by the existing Pipeline
-  // stage change (in FollowUpSheet) — this just listens for it so the
-  // ring updates live instead of only on next page load.
-  useEffect(() => {
-    const channel = supabase
-      .channel(`home-dashboard-${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, () => load())
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [user.id, load])
+  // Lets the pull-down-to-refresh gesture re-run this dashboard's load()
+  // — replaces a realtime subscription that used to watch here. Realtime
+  // broadcasts the FULL row of every change to every connected device
+  // regardless of what a query actually asks for, and this watched every
+  // activity logged by every agent, unfiltered — on the app's default
+  // landing screen, open all day. That turned out to be a major, mostly
+  // invisible driver of Supabase's egress usage. A manual/pull refresh
+  // is more than enough for a monthly-progress dashboard; it doesn't
+  // need to update within a second of every call log.
+  useRegisterRefresh(load)
 
   if (loading || !data) return <PageLoader compact label="Loading your day…" />
 
