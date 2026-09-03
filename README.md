@@ -477,6 +477,22 @@ frontend files and redeploy as usual. No other setup needed.
 
 ---
 
+## Export Data
+
+Settings (admin only) → **Export Data → Download Excel file**. Generates an `.xlsx` file with two
+tabs:
+
+- **Summary** — total leads received, a count for every stage (New, SV Scheduled, SV Done, Won,
+  Lost, etc.), every call outcome (IN/NI/CB/NP/NR/OFF, plus "No calls yet"), by source, and how many
+  reached each milestone (Qualified/Site Visit/Booking).
+- **Leads** — every lead, one row each, with stage, outcome, agent, budget, dates, and notes — the
+  full record, useful both for deeper analysis and as a backup of your data.
+
+Opens directly in Google Sheets (upload to Drive, or Sheets → File → Import) or Excel. No SQL or
+Edge Function changes needed — this runs entirely in the browser using data you can already see.
+
+---
+
 ## Project structure
 
 ```

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import TopBar from '../components/TopBar.jsx'
 import { IconFire, IconInbox, IconLeads, IconReports } from '../components/Icons.jsx'
 import { isPushSupported, getPushState, enablePushNotifications, disablePushNotifications } from '../lib/pushNotifications.js'
+import { exportLeadsToExcel } from '../lib/exportData.js'
 
 export default function Settings() {
   const { user, profile, signOut } = useAuth()
@@ -14,6 +15,8 @@ export default function Settings() {
   const [svTargetInput, setSvTargetInput] = useState('')
   const [savingTarget, setSavingTarget] = useState(false)
   const [autoAssign, setAutoAssign] = useState(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const [pushState, setPushState] = useState('checking') // 'checking' | 'unsupported' | 'denied' | 'subscribed' | 'not-subscribed'
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -87,6 +90,18 @@ export default function Settings() {
     setAutoAssign(next)
     const { error } = await supabase.from('app_settings').update({ auto_assign_enabled: next }).eq('id', 1)
     if (error) setAutoAssign(!next) // revert on failure
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    setExportError('')
+    try {
+      await exportLeadsToExcel()
+    } catch (e) {
+      setExportError(e.message)
+    } finally {
+      setExporting(false)
+    }
   }
 
   async function saveSvTarget() {
@@ -218,6 +233,24 @@ export default function Settings() {
               </div>
               <span className="text-muted">→</span>
             </Link>
+
+            <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
+              <p className="text-sm font-semibold mb-1">Export Data</p>
+              <p className="text-xs text-muted mb-3">
+                Downloads an Excel file with a Summary tab (every stage, call outcome, and milestone
+                count) and a full Leads tab with every record — for analysis, reporting, or as a backup.
+                Opens directly in Google Sheets: upload it to Drive, or open Google Sheets → File →
+                Import.
+              </p>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="press w-full py-3 rounded-xl bg-ink text-white font-semibold text-sm disabled:opacity-50"
+              >
+                {exporting ? 'Preparing export…' : 'Download Excel file'}
+              </button>
+              {exportError && <p className="text-xs text-danger mt-2">{exportError}</p>}
+            </div>
 
             <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
               <div className="flex items-center justify-between">
