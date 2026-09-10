@@ -6,7 +6,6 @@ import RingProgress from '../components/RingProgress.jsx'
 import LeadCard from '../components/LeadCard.jsx'
 import FollowUpSheet from '../components/FollowUpSheet.jsx'
 import { ListSkeleton } from '../components/Loader.jsx'
-import { useLeadsRealtime } from '../lib/useLeadsRealtime.js'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { useMidnightRefresh } from '../lib/useMidnightRefresh.js'
 import { IconFire } from '../components/Icons.jsx'
@@ -83,9 +82,9 @@ export default function WorkQueue() {
   // Lets the pull-down-to-refresh gesture re-run this page's own load().
   useRegisterRefresh(load)
 
-  // A freshly-imported (or reassigned) lead should show up here without
-  // the agent having to pull-to-refresh.
-  useLeadsRealtime(user.id, load)
+  // Realtime removed here too — see the note in Leads.jsx. Opening this
+  // page or pulling to refresh is responsive enough for 4 users, at
+  // zero ongoing connection cost.
 
   // Right at midnight, today's list needs to become yesterday's overdue
   // list — without this, that only happened the next time the page

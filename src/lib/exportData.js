@@ -63,6 +63,7 @@ export async function exportLeadsToExcel() {
   const outcomeLabel = Object.fromEntries(CALL_OUTCOMES.map((o) => [o.key, o.label]))
 
   const leadRows = rows.map((l) => ({
+    'CRM Lead ID': l.id,
     Name: l.name,
     Phone: l.phone,
     Stage: stageLabel[l.status] || l.status,

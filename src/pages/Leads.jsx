@@ -6,7 +6,6 @@ import TopBar from '../components/TopBar.jsx'
 import LeadCard from '../components/LeadCard.jsx'
 import Sheet from '../components/Sheet.jsx'
 import { ListSkeleton } from '../components/Loader.jsx'
-import { useLeadsRealtime } from '../lib/useLeadsRealtime.js'
 import { usePersistedState } from '../lib/usePersistedState.js'
 import { IconPlus, IconUpload, IconSearch, IconFilter, IconInbox } from '../components/Icons.jsx'
 import { STAGES, CALL_OUTCOMES, LEAD_SOURCES, LEAD_LIST_COLUMNS } from '../lib/constants.js'
@@ -60,9 +59,11 @@ export default function Leads() {
   // Lets the pull-down-to-refresh gesture re-run this page's own load().
   useRegisterRefresh(load)
 
-  // Imported leads (or any reassignment) should appear live, not just on
-  // next manual refresh.
-  useLeadsRealtime(user.id, load)
+  // A realtime subscription used to live here (and in Work Queue) —
+  // with only 4 users on the free tier, an always-open websocket per
+  // device is unnecessary cost for what it buys: a lead already shows
+  // up the moment you open this page or pull to refresh, which is
+  // plenty responsive for how this app is actually used.
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length
 
