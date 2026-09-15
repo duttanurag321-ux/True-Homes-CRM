@@ -4,7 +4,6 @@ import { useAuth } from '../lib/AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 import TopBar from '../components/TopBar.jsx'
 import { IconFire, IconInbox, IconLeads, IconReports } from '../components/Icons.jsx'
-import { isPushSupported, getPushState, enablePushNotifications, disablePushNotifications } from '../lib/pushNotifications.js'
 import { exportLeadsToExcel } from '../lib/exportData.js'
 
 export default function Settings() {
@@ -17,38 +16,7 @@ export default function Settings() {
   const [autoAssign, setAutoAssign] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
-  const [pushState, setPushState] = useState('checking') // 'checking' | 'unsupported' | 'denied' | 'subscribed' | 'not-subscribed'
-  const [pushBusy, setPushBusy] = useState(false)
-  const [pushError, setPushError] = useState('')
   const isAdmin = profile?.role === 'admin'
-
-  useEffect(() => {
-    getPushState().then(setPushState)
-  }, [])
-
-  async function handleEnablePush() {
-    setPushBusy(true)
-    setPushError('')
-    try {
-      await enablePushNotifications(user.id)
-      setPushState('subscribed')
-    } catch (e) {
-      setPushError(e.message)
-      setPushState(await getPushState())
-    } finally {
-      setPushBusy(false)
-    }
-  }
-
-  async function handleDisablePush() {
-    setPushBusy(true)
-    try {
-      await disablePushNotifications()
-      setPushState('not-subscribed')
-    } finally {
-      setPushBusy(false)
-    }
-  }
 
   useEffect(() => {
     if (!user) return
@@ -159,29 +127,10 @@ export default function Settings() {
 
         <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
           <p className="text-sm font-semibold mb-1">Notifications</p>
-          <p className="text-xs text-muted mb-3">
-            Get a push notification the moment a new lead is assigned to you, when a follow-up's
-            specific time comes due, and a morning summary of everything due that day.
+          <p className="text-xs text-muted">
+            Currently turned off for everyone to keep the app light on data usage. Ask your admin if
+            you'd like this switched back on.
           </p>
-
-          {pushState === 'unsupported' && <p className="text-sm text-muted">Not supported on this browser/device.</p>}
-          {pushState === 'denied' && (
-            <p className="text-sm text-danger">
-              Blocked in your browser settings. Enable notifications for this site in your browser/phone settings, then reload.
-            </p>
-          )}
-          {(pushState === 'subscribed' || pushState === 'not-subscribed') && (
-            <button
-              onClick={pushState === 'subscribed' ? handleDisablePush : handleEnablePush}
-              disabled={pushBusy}
-              className={`press w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 ${
-                pushState === 'subscribed' ? 'bg-base border border-line' : 'bg-accent text-white'
-              }`}
-            >
-              {pushBusy ? 'Working…' : pushState === 'subscribed' ? 'Notifications on — tap to turn off' : 'Turn on notifications'}
-            </button>
-          )}
-          {pushError && <p className="text-xs text-danger mt-2">{pushError}</p>}
         </div>
 
         {isAdmin && (
