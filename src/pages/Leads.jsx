@@ -11,7 +11,7 @@ import { IconPlus, IconUpload, IconSearch, IconFilter, IconInbox } from '../comp
 import { STAGES, CALL_OUTCOMES, LEAD_SOURCES, LEAD_LIST_COLUMNS } from '../lib/constants.js'
 import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
-const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '' }
+const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '', project: '' }
 
 export default function Leads() {
   const { user, profile } = useAuth()
@@ -65,6 +65,13 @@ export default function Leads() {
   // up the moment you open this page or pull to refresh, which is
   // plenty responsive for how this app is actually used.
 
+  // Project names come from whatever has actually been imported, so new
+  // campaigns/sheet tabs show up here automatically with no setup.
+  const projectOptions = useMemo(
+    () => Array.from(new Set(leads.map((l) => l.project).filter(Boolean))).sort(),
+    [leads]
+  )
+
   const activeFilterCount = Object.values(filters).filter(Boolean).length
 
   const filtered = useMemo(() => {
@@ -81,6 +88,7 @@ export default function Leads() {
     }
     if (filters.outcome) list = list.filter((l) => l.call_status === filters.outcome)
     if (filters.source) list = list.filter((l) => l.source === filters.source)
+    if (filters.project) list = list.filter((l) => (l.project || '') === filters.project)
     if (filters.agent) list = list.filter((l) => l.assigned_to === filters.agent)
     if (query.trim()) {
       const q = query.toLowerCase()
@@ -198,6 +206,7 @@ export default function Leads() {
 
       {activeFilterCount > 0 && (
         <div className="px-4 mb-3 flex items-center gap-1.5 flex-wrap">
+          {filters.project && <FilterChip label={filters.project} onClear={() => setFilters((f) => ({ ...f, project: '' }))} />}
           {filters.stage && <FilterChip label={STAGES.find((s) => s.key === filters.stage)?.label} onClear={() => setFilters((f) => ({ ...f, stage: '' }))} />}
           {filters.outcome && <FilterChip label={filters.outcome} onClear={() => setFilters((f) => ({ ...f, outcome: '' }))} />}
           {filters.source && <FilterChip label={filters.source} onClear={() => setFilters((f) => ({ ...f, source: '' }))} />}
@@ -257,6 +266,23 @@ export default function Leads() {
 
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter leads">
         <div className="space-y-5">
+          {projectOptions.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold mb-2">Project</p>
+              <div className="flex flex-wrap gap-1.5">
+                <PillOption label="All" active={!draftFilters.project} onClick={() => setDraftFilters((f) => ({ ...f, project: '' }))} />
+                {projectOptions.map((p) => (
+                  <PillOption
+                    key={p}
+                    label={p}
+                    active={draftFilters.project === p}
+                    onClick={() => setDraftFilters((f) => ({ ...f, project: p }))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <p className="text-sm font-semibold mb-2">Stage</p>
             <div className="flex flex-wrap gap-1.5">

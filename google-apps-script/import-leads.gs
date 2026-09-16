@@ -220,6 +220,12 @@ function importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId) {
           next_action: null,
           next_followup_date: null,
           origin: 'facebook',
+          // The sheet tab's own name IS the project name — rename a tab
+          // to "Green Valley" and every lead from it is tagged Green
+          // Valley. New tabs for new campaigns need zero setup here.
+          // Tabs still on a default name (Sheet1, Sheet2...) are left
+          // blank rather than saving a meaningless "Sheet1" as a project.
+          project: isDefaultSheetName(sheetLabel) ? null : sheetLabel,
           assigned_to: null,
           created_by: adminId
         },
@@ -263,6 +269,11 @@ function ensureBookkeepingColumns(sheet, headerRow) {
   const imported = ensure(COL_IMPORTED)
   const importedAt = ensure(COL_IMPORTED_AT)
   return { headerRow, colIndex: { imported, importedAt } }
+}
+
+/** True for untouched default tab names like "Sheet1" / "Copy of Sheet 2" — those aren't real project names. */
+function isDefaultSheetName(name) {
+  return /^(copy of\s+)?sheet\s*\d*$/i.test(String(name || '').trim())
 }
 
 function findColumn(headerRow, aliases) {

@@ -106,6 +106,7 @@ export default function LeadDetail() {
     <div>
       <TopBar
         title={lead.name}
+        subtitle={lead.project || 'Unspecified project'}
         back
         fallback="/leads"
         right={
@@ -136,6 +137,7 @@ export default function LeadDetail() {
             <OutcomePill code={lead.call_status} size="lg" />
           </div>
           <Row label="Phone" value={displayPhone(lead.phone)} />
+          <Row label="Project" value={lead.project || '—'} />
           <Row label="Source" value={lead.source} />
           {lead.profession && <Row label="Profession" value={lead.profession} />}
           <Row label="Budget" value={formatINR(lead.budget_max)} />

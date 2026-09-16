@@ -57,7 +57,7 @@ export const LEAD_ORIGIN_MAP = Object.fromEntries(LEAD_ORIGINS.map((o) => [o.key
 // single-row select('*'), which stays as-is since it's one row and
 // genuinely needs everything.
 export const LEAD_LIST_COLUMNS =
-  'id,name,phone,status,call_status,budget_max,katha,next_followup_date,next_followup_time,next_action,location_preference,source,assigned_to,origin,created_at'
+  'id,name,phone,project,status,call_status,budget_max,katha,next_followup_date,next_followup_time,next_action,location_preference,source,assigned_to,origin,created_at'
 
 // Why the lead is buying — set after the first real conversation, not at
 // creation, since you usually don't know this until you've actually

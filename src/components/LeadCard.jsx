@@ -24,6 +24,11 @@ export default function LeadCard({ lead, onLogClick, showFollowUp = true, select
       <div className="flex-1 min-w-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {/* Project first, above the name — it's the first thing an
+              agent needs to know before picking up the phone. */}
+          <p className={`text-[11px] font-bold uppercase tracking-wide truncate mb-0.5 ${lead.project ? 'text-accent' : 'text-muted/70'}`}>
+            {lead.project || 'Unspecified project'}
+          </p>
           <p className="font-semibold text-[15px] truncate">{lead.name}</p>
           <p className="text-sm text-muted">{displayPhone(lead.phone)}</p>
         </div>

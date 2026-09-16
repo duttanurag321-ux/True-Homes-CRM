@@ -18,7 +18,7 @@ export async function exportLeadsToExcel() {
     supabase
       .from('leads')
       .select(
-        'id,name,phone,status,call_status,source,origin,assigned_to,budget_max,location_preference,purpose,notes,created_at,next_followup_date,next_followup_time,qualified_at,site_visit_at,booking_at'
+        'id,name,phone,project,status,call_status,source,origin,assigned_to,budget_max,location_preference,purpose,notes,created_at,next_followup_date,next_followup_time,qualified_at,site_visit_at,booking_at'
       )
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id,full_name,email')
@@ -51,6 +51,24 @@ export async function exportLeadsToExcel() {
   })
   Object.entries(originCounts).forEach(([label, count]) => summary.push([label, count]))
   summary.push([])
+
+  // Per-project performance — with several campaigns running at once,
+  // this is the comparison that actually matters: which project's ads
+  // are producing leads that convert, not just leads.
+  const projects = Array.from(new Set(rows.map((l) => l.project || 'Unspecified'))).sort()
+  summary.push(['By project', 'Leads', 'Qualified', 'Site Visits', 'Bookings'])
+  projects.forEach((p) => {
+    const inProject = rows.filter((l) => (l.project || 'Unspecified') === p)
+    summary.push([
+      p,
+      inProject.length,
+      inProject.filter((l) => l.qualified_at).length,
+      inProject.filter((l) => l.site_visit_at).length,
+      inProject.filter((l) => l.booking_at).length
+    ])
+  })
+  summary.push([])
+
   summary.push(['Milestones reached', ''])
   summary.push(['Qualified (marked Interested)', rows.filter((l) => l.qualified_at).length])
   summary.push(['Site Visit completed', rows.filter((l) => l.site_visit_at).length])
@@ -64,6 +82,7 @@ export async function exportLeadsToExcel() {
 
   const leadRows = rows.map((l) => ({
     'CRM Lead ID': l.id,
+    Project: l.project || 'Unspecified',
     Name: l.name,
     Phone: l.phone,
     Stage: stageLabel[l.status] || l.status,
@@ -85,7 +104,7 @@ export async function exportLeadsToExcel() {
 
   const workbook = XLSX.utils.book_new()
   const summarySheet = XLSX.utils.aoa_to_sheet(summary)
-  summarySheet['!cols'] = [{ wch: 34 }, { wch: 12 }]
+  summarySheet['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }]
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary')
 
   const leadsSheet = XLSX.utils.json_to_sheet(leadRows)

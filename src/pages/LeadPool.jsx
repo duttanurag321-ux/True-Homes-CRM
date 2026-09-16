@@ -311,6 +311,9 @@ function PoolRow({ lead, checked, onToggle }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
+            <p className={`text-[11px] font-bold uppercase tracking-wide truncate mb-0.5 ${lead.project ? 'text-accent' : 'text-muted/70'}`}>
+              {lead.project || 'Unspecified project'}
+            </p>
             <p className="font-semibold text-[15px] truncate">{lead.name}</p>
             <p className="text-sm text-muted">{displayPhone(lead.phone)}</p>
           </div>
