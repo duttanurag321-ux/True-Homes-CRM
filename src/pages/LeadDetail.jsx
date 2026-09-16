@@ -28,7 +28,7 @@ export default function LeadDetail() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
-  const [showMetaInfo, setShowMetaInfo] = useState(false)
+  const [showFormAnswers, setShowFormAnswers] = useState(false)
   const [agents, setAgents] = useState([])
   const [transferOpen, setTransferOpen] = useState(false)
   const [transferring, setTransferring] = useState(false)
@@ -139,6 +139,9 @@ export default function LeadDetail() {
           <Row label="Phone" value={displayPhone(lead.phone)} />
           <Row label="Project" value={lead.project || '—'} />
           <Row label="Source" value={lead.source} />
+          {lead.budget_answer && <Row label="Budget (from form)" value={lead.budget_answer} />}
+          {lead.visit_plan && <Row label="Visit Plan" value={lead.visit_plan} />}
+          {lead.buying_plan && <Row label="Buying Plan" value={lead.buying_plan} />}
           {lead.profession && <Row label="Profession" value={lead.profession} />}
           <Row label="Budget" value={formatINR(lead.budget_max)} />
           {(lead.sqft || lead.katha) && (
@@ -149,34 +152,26 @@ export default function LeadDetail() {
           {lead.notes && <Row label="Notes" value={lead.notes} />}
         </div>
 
-        {lead.meta_lead_id && (
+        {lead.form_answers && Object.keys(lead.form_answers).length > 0 && (
           <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
             <button
-              onClick={() => setShowMetaInfo((v) => !v)}
+              onClick={() => setShowFormAnswers((v) => !v)}
               className="press w-full flex items-center justify-between text-sm font-semibold"
             >
               <span className="flex items-center gap-2">
-                <span className="text-accent">📘</span>
-                Facebook Ad Info
+                <span className="text-accent">📝</span>
+                Form Answers
               </span>
-              <IconChevron size={14} className={`text-muted transition-transform ${showMetaInfo ? 'rotate-90' : ''}`} />
+              <IconChevron size={14} className={`text-muted transition-transform ${showFormAnswers ? 'rotate-90' : ''}`} />
             </button>
-            {showMetaInfo && (
-              <div className="mt-3 pt-3 border-t border-line space-y-2">
-                <Row label="Meta Lead ID" value={lead.meta_lead_id} mono />
-                {lead.meta_campaign_name && <Row label="Campaign" value={lead.meta_campaign_name} />}
-                {lead.meta_adset_name && <Row label="Ad Set" value={lead.meta_adset_name} />}
-                {lead.meta_ad_name && <Row label="Ad" value={lead.meta_ad_name} />}
-                {lead.meta_form_name && <Row label="Form" value={lead.meta_form_name} />}
-                {lead.meta_platform && <Row label="Platform" value={lead.meta_platform} />}
-                {lead.meta_is_organic !== null && lead.meta_is_organic !== undefined && (
-                  <Row label="Organic" value={lead.meta_is_organic ? 'Yes' : 'No (paid)'} />
-                )}
-                <div className="flex items-center gap-1.5 pt-2 border-t border-line flex-wrap">
-                  {lead.qualified_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Qualified sent to Meta</span>}
-                  {lead.site_visit_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Site Visit sent to Meta</span>}
-                  {lead.booking_event_sent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Booking sent to Meta</span>}
-                </div>
+            {showFormAnswers && (
+              <div className="mt-3 pt-3 border-t border-line space-y-2.5">
+                {Object.entries(lead.form_answers).map(([question, answer]) => (
+                  <div key={question}>
+                    <p className="text-xs text-muted">{question}</p>
+                    <p className="text-sm font-medium mt-0.5">{answer}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>

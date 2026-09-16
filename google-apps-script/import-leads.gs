@@ -167,6 +167,36 @@ function importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId) {
     if (key.indexOf('meta') === 0) metaCols[key] = findColumn(headerRow, COLUMN_ALIASES[key])
   }
 
+  // Form questions — any column whose header ends in "?" is treated as
+  // a question the lead answered on the Facebook form (e.g. "What's
+  // your budget?", "When are you looking to buy?"). Different forms
+  // can have different questions, or none at all — whatever's actually
+  // in this sheet's header row is what gets captured, nothing hardcoded.
+  //
+  // Three specific ones (budget / site visit plan / buying plan) get
+  // pulled out separately instead of lumped in with the rest — the CRM
+  // shows those right under the lead's name, since they're the ones
+  // that matter most at a glance. Matched by keyword, so it doesn't
+  // matter how each form phrases its exact question.
+  const questionCols = []
+  let budgetCol = -1,
+    visitPlanCol = -1,
+    buyingPlanCol = -1
+  headerRow.forEach((h, idx) => {
+    const label = String(h || '').trim()
+    if (!label.endsWith('?')) return
+    const lower = label.toLowerCase()
+    if (budgetCol === -1 && lower.indexOf('budget') !== -1) {
+      budgetCol = idx
+    } else if (visitPlanCol === -1 && lower.indexOf('visit') !== -1) {
+      visitPlanCol = idx
+    } else if (buyingPlanCol === -1 && (lower.indexOf('buy') !== -1 || lower.indexOf('purchase') !== -1)) {
+      buyingPlanCol = idx
+    } else {
+      questionCols.push({ label, idx })
+    }
+  })
+
   let imported = 0,
     skippedDuplicate = 0,
     skippedInvalid = 0,
@@ -198,6 +228,10 @@ function importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId) {
       const notes = notesCol !== -1 ? String(row[notesCol] || '').trim() : ''
       const source = sourceCol !== -1 && row[sourceCol] ? String(row[sourceCol]).trim() : DEFAULT_SOURCE
       const metaFields = buildMetaFields(row, metaCols)
+      const formAnswers = buildFormAnswers(row, questionCols)
+      const budgetAnswer = budgetCol !== -1 && row[budgetCol] !== '' ? String(row[budgetCol]).trim() : null
+      const visitPlan = visitPlanCol !== -1 && row[visitPlanCol] !== '' ? String(row[visitPlanCol]).trim() : null
+      const buyingPlan = buyingPlanCol !== -1 && row[buyingPlanCol] !== '' ? String(row[buyingPlanCol]).trim() : null
 
       if (metaFields.meta_lead_id && metaLeadIdExists(SUPABASE_URL, SERVICE_KEY, metaFields.meta_lead_id)) {
         sheet.getRange(sheetRow, colIndex.imported + 1).setValue('Duplicate — Meta Lead ID already in CRM')
@@ -226,6 +260,10 @@ function importFromSheet(sheet, SUPABASE_URL, SERVICE_KEY, adminId) {
           // Tabs still on a default name (Sheet1, Sheet2...) are left
           // blank rather than saving a meaningless "Sheet1" as a project.
           project: isDefaultSheetName(sheetLabel) ? null : sheetLabel,
+          form_answers: Object.keys(formAnswers).length ? formAnswers : null,
+          budget_answer: budgetAnswer,
+          visit_plan: visitPlan,
+          buying_plan: buyingPlan,
           assigned_to: null,
           created_by: adminId
         },
@@ -282,6 +320,18 @@ function findColumn(headerRow, aliases) {
     if (idx !== -1) return idx
   }
   return -1
+}
+
+/** Reads every "...?"-headed column that has a non-empty answer in this row. */
+function buildFormAnswers(row, questionCols) {
+  const answers = {}
+  questionCols.forEach(({ label, idx }) => {
+    const val = row[idx]
+    if (val !== '' && val !== null && val !== undefined) {
+      answers[label] = String(val).trim()
+    }
+  })
+  return answers
 }
 
 /** Reads whichever Meta attribution columns exist in this row into the Supabase field names. */
