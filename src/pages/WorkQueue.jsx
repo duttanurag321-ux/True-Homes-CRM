@@ -16,10 +16,13 @@ import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 export default function WorkQueue() {
   const { user, profile } = useAuth()
   const [tab, setTab] = usePersistedState('workqueue:tab', 'today') // 'overdue' | 'today' | 'new'
-  const [overdueLeads, setOverdueLeads] = useState([])
-  const [todayLeads, setTodayLeads] = useState([])
+  // Persisted for the same reason as Leads.jsx — so returning to Work
+  // Queue after opening a lead shows the lists instantly from cache
+  // instead of blanking to a skeleton and refetching every time.
+  const [overdueLeads, setOverdueLeads] = usePersistedState('workqueue:overdue', [])
+  const [todayLeads, setTodayLeads] = usePersistedState('workqueue:today', [])
   const [doneLeadIds, setDoneLeadIds] = useState(new Set())
-  const [newLeads, setNewLeads] = useState([])
+  const [newLeads, setNewLeads] = usePersistedState('workqueue:new', [])
   const [loading, setLoading] = useState(true)
   const [activeLead, setActiveLead] = useState(null)
 
@@ -167,7 +170,7 @@ export default function WorkQueue() {
       {tab === 'overdue' && (
         <div className="px-4 mt-4 space-y-3">
           <p className="text-sm font-semibold text-muted px-0.5">Overdue — these were due on an earlier day</p>
-          {loading && <ListSkeleton rows={4} />}
+          {loading && overdueLeads.length === 0 && <ListSkeleton rows={4} />}
           {!loading && overdueLeads.length === 0 && <EmptyState emoji="🎉" title="Nothing overdue" subtitle="You're all caught up." />}
           {overdueLeads.map((lead) => (
             <LeadCard key={lead.id} lead={lead} onLogClick={setActiveLead} />
@@ -178,7 +181,7 @@ export default function WorkQueue() {
       {tab === 'today' && (
         <div className="px-4 mt-4 space-y-3">
           <p className="text-sm font-semibold text-muted px-0.5">Due today</p>
-          {loading && <ListSkeleton rows={4} />}
+          {loading && todayLeads.length === 0 && <ListSkeleton rows={4} />}
           {!loading && todayLeads.length === 0 && (
             <EmptyState emoji="✅" title="Nothing due today" subtitle="New follow-ups will show up here the moment they're due." />
           )}
@@ -193,7 +196,7 @@ export default function WorkQueue() {
           <p className="text-sm font-semibold text-muted px-0.5">
             Waiting for a first call — they won't show up as a follow-up until then
           </p>
-          {loading && <ListSkeleton rows={4} />}
+          {loading && newLeads.length === 0 && <ListSkeleton rows={4} />}
           {!loading && newLeads.length === 0 && (
             <EmptyState emoji="📭" title="No new leads waiting" subtitle="Fresh leads that haven't been called yet will show up here." />
           )}

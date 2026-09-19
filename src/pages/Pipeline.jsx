@@ -10,7 +10,7 @@ import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function Pipeline() {
   const { user } = useAuth()
-  const [leads, setLeads] = useState([])
+  const [leads, setLeads] = usePersistedState('pipeline:data', [])
   const [activeStage, setActiveStage] = usePersistedState('pipeline:stage', 'all')
   const [loading, setLoading] = useState(true)
 
@@ -61,7 +61,7 @@ export default function Pipeline() {
       </div>
 
       <div className="px-4 space-y-3 pb-4">
-        {loading && <ListSkeleton rows={5} />}
+        {loading && leads.length === 0 && <ListSkeleton rows={5} />}
         {!loading && filtered.length === 0 && (
           <p className="text-center text-muted text-sm py-14">No leads in this stage yet.</p>
         )}

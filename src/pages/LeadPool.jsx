@@ -13,7 +13,7 @@ import { useRegisterRefresh } from '../lib/RefreshContext.jsx'
 
 export default function LeadPool() {
   const { user, profile } = useAuth()
-  const [leads, setLeads] = useState([])
+  const [leads, setLeads] = usePersistedState('leadpool:data', [])
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = usePersistedState('leadpool:query', '')
@@ -217,7 +217,7 @@ export default function LeadPool() {
       )}
 
       <div className="px-4 space-y-2.5 pb-10">
-        {loading && <ListSkeleton rows={5} />}
+        {loading && leads.length === 0 && <ListSkeleton rows={5} />}
         {!loading && filtered.length === 0 && (
           <div className="text-center py-16">
             <p className="text-5xl mb-3">📥</p>

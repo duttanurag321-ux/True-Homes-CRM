@@ -16,7 +16,13 @@ const EMPTY_FILTERS = { stage: '', outcome: '', source: '', agent: '', project: 
 export default function Leads() {
   const { user, profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const [leads, setLeads] = useState([])
+  // Persisted (not plain useState) so navigating away to a lead and
+  // coming back shows the list INSTANTLY from what was already loaded,
+  // instead of clearing to empty and showing a loading skeleton again
+  // — which was what made every back-navigation feel like a full
+  // reload, even though scroll position itself was already restoring
+  // correctly underneath that skeleton flash.
+  const [leads, setLeads] = usePersistedState('leads:data', [])
   const [agents, setAgents] = useState([])
   // Persisted (not plain useState) so opening a lead and coming back
   // doesn't wipe out what you'd searched/filtered for — the Leads and
@@ -240,7 +246,11 @@ export default function Leads() {
       )}
 
       <div className="px-4 space-y-3 pb-4">
-        {loading && <ListSkeleton rows={5} />}
+        {/* Only show the skeleton when there's truly nothing to display
+            yet (first-ever load this session) — a background refresh
+            with existing cached data underneath it should never blank
+            the list out, that's the "feels like it reloaded" bug. */}
+        {loading && leads.length === 0 && <ListSkeleton rows={5} />}
         {!loading && filtered.length === 0 && (
           <div className="text-center py-16">
             <p className="text-5xl mb-3">📋</p>
