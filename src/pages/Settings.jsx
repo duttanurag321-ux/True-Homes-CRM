@@ -14,6 +14,7 @@ export default function Settings() {
   const [svTargetInput, setSvTargetInput] = useState('')
   const [savingTarget, setSavingTarget] = useState(false)
   const [autoAssign, setAutoAssign] = useState(null)
+  const [projectRules, setProjectRules] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
   const isAdmin = profile?.role === 'admin'
@@ -51,7 +52,18 @@ export default function Settings() {
         setSvTargetInput(String(data?.sv_monthly_target ?? 12))
         setAutoAssign(data?.auto_assign_enabled ?? false)
       })
+    supabase.rpc('admin_project_rules').then(({ data }) => setProjectRules(data || []))
   }, [isAdmin])
+
+  async function toggleProjectAgent(rule, agentId) {
+    const has = rule.agent_ids.includes(agentId)
+    const nextIds = has ? rule.agent_ids.filter((x) => x !== agentId) : [...rule.agent_ids, agentId]
+    setProjectRules((list) => list.map((r) => (r.project === rule.project ? { ...r, agent_ids: nextIds } : r)))
+    const { error } = await supabase.rpc('set_project_agents', { p_project: rule.project, p_agent_ids: nextIds })
+    if (error) {
+      setProjectRules((list) => list.map((r) => (r.project === rule.project ? { ...r, agent_ids: rule.agent_ids } : r)))
+    }
+  }
 
   async function toggleAutoAssign() {
     const next = !autoAssign
@@ -224,6 +236,40 @@ export default function Settings() {
                     }`}
                   />
                 </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-line/60 shadow-card p-4">
+              <p className="text-sm font-semibold mb-1">Assign by Project</p>
+              <p className="text-xs text-muted mb-3">
+                Tick the agents who should get a project's new leads. Leads from that project rotate only among the
+                ticked agents (who have "Receiving Leads" on). Nothing ticked = the project follows the normal
+                Automatic Round Robin. If every ticked agent is switched off, new leads wait in the Lead Pool.
+              </p>
+              {projectRules === null && <p className="text-sm text-muted">Loading projects…</p>}
+              {projectRules?.length === 0 && <p className="text-sm text-muted">No projects yet — they appear after leads arrive.</p>}
+              <div className="space-y-4">
+                {projectRules?.map((r) => (
+                  <div key={r.project}>
+                    <p className="text-sm font-medium mb-1.5">{r.project}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {agents?.map((a) => {
+                        const on = r.agent_ids.includes(a.id)
+                        return (
+                          <button
+                            key={a.id}
+                            onClick={() => toggleProjectAgent(r, a.id)}
+                            className={`press px-3 py-1.5 rounded-full text-xs font-medium border ${
+                              on ? 'bg-accent text-white border-accent' : 'bg-base text-ink border-line'
+                            }`}
+                          >
+                            {a.full_name || a.email}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

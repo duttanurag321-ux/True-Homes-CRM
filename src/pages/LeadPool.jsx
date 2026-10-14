@@ -116,8 +116,13 @@ export default function LeadPool() {
     // One RPC call per lead — `get_next_import_agent()` locks its state
     // row for the duration of each call, so this stays fair even if two
     // admins run a round robin at the same moment.
+    const projectById = new Map(leads.map((l) => [l.id, l.project]))
     for (const id of ids) {
-      const { data: agentId, error: rpcErr } = await supabase.rpc('get_next_import_agent')
+      // Project-aware: uses the project's selected agents if a rule exists,
+      // otherwise falls back to the normal global rotation.
+      const { data: agentId, error: rpcErr } = await supabase.rpc('get_next_agent_for_project', {
+        p_project: projectById.get(id) || ''
+      })
       if (rpcErr || !agentId) {
         skipped++
         continue
